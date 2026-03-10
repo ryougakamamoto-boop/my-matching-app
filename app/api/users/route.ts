@@ -34,15 +34,22 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = await prisma.user.create({
-      data: {
-        authId,
-        email,
-        name,
-        bio,
-        imageUrl,
-      },
-    });
+ const user = await prisma.user.upsert({
+  where: { authId },
+  update: {
+    email,
+    name,
+    bio,
+    imageUrl,
+  },
+  create: {
+    authId,
+    email,
+    name,
+    bio,
+    imageUrl,
+  },
+});
 
     return NextResponse.json(user, { status: 201 });
   } catch (error) {
