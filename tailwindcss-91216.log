@@ -1,0 +1,46 @@
+2026-03-07T10:17:19.268724Z  INFO tailwindcss_oxide::scanner: Provided sources:
+2026-03-07T10:17:19.268863Z  INFO tailwindcss_oxide::scanner: Source: PublicSourceEntry { base: "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app", pattern: "**/*", negated: false }
+2026-03-07T10:17:19.269141Z  INFO tailwindcss_oxide::scanner: Optimized sources:
+2026-03-07T10:17:19.269169Z  INFO tailwindcss_oxide::scanner: Source: Auto { base: "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app" }
+2026-03-07T10:17:19.270739Z  INFO discover_sources: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.271159Z  INFO discover_sources:walk_synchronous: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.277074Z  INFO discover_sources:walk_synchronous: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.277841Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\lib\\prisma.ts"
+2026-03-07T10:17:19.277867Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\package.json"
+2026-03-07T10:17:19.277894Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\app\\api\\users\\route.ts"
+2026-03-07T10:17:19.277911Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\prisma\\schema.prisma"
+2026-03-07T10:17:19.277922Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\next.config.ts"
+2026-03-07T10:17:19.277876Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\app\\page.tsx"
+2026-03-07T10:17:19.277983Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\public\\vercel.svg"
+2026-03-07T10:17:19.278048Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\public\\globe.svg"
+2026-03-07T10:17:19.278114Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\postcss.config.mjs"
+2026-03-07T10:17:19.278124Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\README.md"
+2026-03-07T10:17:19.278140Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\tsconfig.json"
+2026-03-07T10:17:19.278146Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\public\\file.svg"
+2026-03-07T10:17:19.278154Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\eslint.config.mjs"
+2026-03-07T10:17:19.278155Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\app\\layout.tsx"
+2026-03-07T10:17:19.278197Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\public\\next.svg"
+2026-03-07T10:17:19.278202Z  INFO tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\public\\window.svg"
+2026-03-07T10:17:19.278263Z  INFO discover_sources: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.278290Z  INFO extract_candidates: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.278298Z  INFO extract_candidates:parse_all_blobs: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.278308Z  INFO extract_candidates:parse_all_blobs:extract: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.278687Z  INFO extract_candidates:parse_all_blobs:extract: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.278761Z  INFO extract_candidates:parse_all_blobs: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.278771Z  INFO extract_candidates:read_all_files: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.278775Z  INFO extract_candidates:read_all_files: tailwindcss_oxide::scanner: Reading 1 file(s)
+2026-03-07T10:17:19.278925Z  INFO extract_candidates:read_all_files: tailwindcss_oxide::scanner: Reading "C:\\Users\\ryoug\\OneDrive\\Apps\\デスクトップ\\matching gemini\\my-matching-app\\app\\globals.css"
+2026-03-07T10:17:19.278939Z  INFO extract_candidates:read_all_files: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.278949Z  INFO extract_candidates:extract_css_variables: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.278959Z  INFO extract_candidates:extract_css_variables:extract: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.279069Z  INFO extract_candidates:extract_css_variables:extract: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.279088Z  INFO extract_candidates:extract_css_variables: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.279157Z  INFO extract_candidates: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.279371Z  INFO get_files: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.279380Z  INFO get_files:discover_sources: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.279384Z  INFO get_files:discover_sources: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.279535Z  INFO get_files: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.279771Z  INFO get_globs: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.279781Z  INFO get_globs:discover_sources: tailwindcss_oxide::scanner: enter
+2026-03-07T10:17:19.279786Z  INFO get_globs:discover_sources: tailwindcss_oxide::scanner: exit
+2026-03-07T10:17:19.285481Z  INFO get_globs: tailwindcss_oxide::scanner: exit
