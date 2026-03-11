@@ -137,24 +137,50 @@ export default function HomePage() {
         email: user.email,
       });
 
-      const res = await fetch("/api/users", { cache: "no-store" });
-      const users = await res.json();
+      let res = await fetch(
+        `/api/users/me?authId=${encodeURIComponent(user.id)}`,
+        {
+          cache: "no-store",
+        }
+      );
+      let data = await res.json();
 
-      if (!res.ok || !Array.isArray(users)) {
-        setMessage("ユーザー取得に失敗しました");
+      if (res.status === 404) {
+        const createRes = await fetch("/api/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            authId: user.id,
+            email: user.email,
+            name: user.email?.split("@")[0] || "user",
+            bio: null,
+            imageUrl: null,
+          }),
+        });
+
+        const createData = await createRes.json();
+
+        if (!createRes.ok) {
+          setMessage(createData.error ?? "プロフィール作成に失敗しました");
+          setView("login");
+          return;
+        }
+
+        res = await fetch(`/api/users/me?authId=${encodeURIComponent(user.id)}`, {
+          cache: "no-store",
+        });
+        data = await res.json();
+      }
+
+      if (!res.ok) {
+        setMessage(data.error ?? "ユーザー取得に失敗しました");
         setView("login");
         return;
       }
 
-      const me = users.find((u: AppUser) => u.authId === user.id);
-
-      if (!me) {
-        setMessage("プロフィール情報が見つかりません");
-        setView("login");
-        return;
-      }
-
-      setAppUser(me);
+      setAppUser(data);
       setView("home");
     } catch (error) {
       console.error(error);
@@ -263,6 +289,11 @@ export default function HomePage() {
 
       if (error) {
         setMessage(error.message);
+        return;
+      }
+
+      if (!data.user) {
+        setMessage("ログインユーザーを取得できませんでした");
         return;
       }
 
