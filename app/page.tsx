@@ -117,77 +117,99 @@ export default function HomePage() {
   }, [view, selectedMatch]);
 
   async function checkSession() {
-    try {
-      setView("loading");
-      setMessage("");
+  try {
+    setView("loading");
+    setMessage("");
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-      if (!user) {
-        setAuthUser(null);
-        setAppUser(null);
-        setView("login");
-        return;
-      }
+    console.log("getUser user =", user);
+    console.log("getUser error =", authError);
 
-      setAuthUser({
-        id: user.id,
-        email: user.email,
+    if (authError) {
+      throw new Error(authError.message);
+    }
+
+    if (!user) {
+      setAuthUser(null);
+      setAppUser(null);
+      setView("login");
+      return;
+    }
+
+    setAuthUser({
+      id: user.id,
+      email: user.email,
+    });
+
+    let res = await fetch(
+      `/api/users/me?authId=${encodeURIComponent(user.id)}`,
+      { cache: "no-store" }
+    );
+
+    console.log("/api/users/me status =", res.status);
+
+    let data = await res.json();
+    console.log("/api/users/me data =", data);
+
+    if (res.status === 404) {
+      const createRes = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          authId: user.id,
+          email: user.email,
+          name: user.email?.split("@")[0] || "user",
+          bio: null,
+          imageUrl: null,
+        }),
       });
 
-      let res = await fetch(
-        `/api/users/me?authId=${encodeURIComponent(user.id)}`,
-        {
-          cache: "no-store",
-        }
-      );
-      let data = await res.json();
+      console.log("/api/users POST status =", createRes.status);
 
-      if (res.status === 404) {
-        const createRes = await fetch("/api/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            authId: user.id,
-            email: user.email,
-            name: user.email?.split("@")[0] || "user",
-            bio: null,
-            imageUrl: null,
-          }),
-        });
+      const createData = await createRes.json();
+      console.log("/api/users POST data =", createData);
 
-        const createData = await createRes.json();
-
-        if (!createRes.ok) {
-          setMessage(createData.error ?? "プロフィール作成に失敗しました");
-          setView("login");
-          return;
-        }
-
-        res = await fetch(`/api/users/me?authId=${encodeURIComponent(user.id)}`, {
-          cache: "no-store",
-        });
-        data = await res.json();
-      }
-
-      if (!res.ok) {
-        setMessage(data.error ?? "ユーザー取得に失敗しました");
+      if (!createRes.ok) {
+        setMessage(createData.error ?? "プロフィール作成に失敗しました");
         setView("login");
         return;
       }
 
-      setAppUser(data);
-      setView("home");
-    } catch (error) {
-      console.error(error);
-      setMessage("セッション確認に失敗しました");
-      setView("login");
+      res = await fetch(
+        `/api/users/me?authId=${encodeURIComponent(user.id)}`,
+        { cache: "no-store" }
+      );
+
+      console.log("retry /api/users/me status =", res.status);
+
+      data = await res.json();
+      console.log("retry /api/users/me data =", data);
     }
+
+    if (!res.ok) {
+      setMessage(data.error ?? "ユーザー取得に失敗しました");
+      setView("login");
+      return;
+    }
+
+    setAppUser(data);
+    setView("home");
+  } catch (error) {
+    console.error("checkSession error =", error);
+    setMessage(
+      error instanceof Error
+        ? `セッション確認に失敗しました: ${error.message}`
+        : "セッション確認に失敗しました"
+    );
+    setView("login");
   }
+}
 
   async function handleRegister() {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -306,12 +328,15 @@ export default function HomePage() {
       setPassword("");
 
       await checkSession();
-    } catch (error) {
-      console.error(error);
-      setMessage("ログイン中にエラーが発生しました");
-    } finally {
-      setLoading(false);
-    }
+  } catch (error) {
+  console.error("checkSession error =", error);
+  setMessage(
+    error instanceof Error
+      ? `セッション確認に失敗しました: ${error.message}`
+      : "セッション確認に失敗しました"
+  );
+  setView("login");
+}
   }
 
   async function handleLogout() {
