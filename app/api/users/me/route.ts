@@ -7,10 +7,7 @@ export async function GET(req: Request) {
     const authId = searchParams.get("authId");
 
     if (!authId) {
-      return NextResponse.json(
-        { error: "authId が必要です" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "authId が必要です" }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
