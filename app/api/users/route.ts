@@ -1,61 +1,34 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const users = await prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const { searchParams } = new URL(req.url);
+    const authId = searchParams.get("authId");
 
-    return NextResponse.json(users);
-  } catch (error) {
-    console.error("GET /api/users error:", error);
-    return NextResponse.json(
-      { error: "ユーザー取得に失敗しました" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-
-    const authId = String(body.authId ?? "").trim();
-    const email = String(body.email ?? "").trim();
-    const name = String(body.name ?? "").trim();
-    const bio = body.bio ? String(body.bio).trim() : null;
-    const imageUrl = body.imageUrl ? String(body.imageUrl).trim() : null;
-
-    if (!authId || !email || !name) {
+    if (!authId) {
       return NextResponse.json(
-        { error: "authId, email, name は必須です" },
+        { error: "authId が必要です" },
         { status: 400 }
       );
     }
 
- const user = await prisma.user.upsert({
-  where: { email},
-  update: {
-    email,
-    name,
-    bio,
-    imageUrl,
-  },
-  create: {
-    authId,
-    email,
-    name,
-    bio,
-    imageUrl,
-  },
-});
+    const user = await prisma.user.findUnique({
+      where: { authId },
+    });
 
-    return NextResponse.json(user, { status: 201 });
+    if (!user) {
+      return NextResponse.json(
+        { error: "プロフィール情報が見つかりません" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(user);
   } catch (error) {
-    console.error("POST /api/users error:", error);
+    console.error("GET /api/users/me error:", error);
     return NextResponse.json(
-      { error: "ユーザー登録に失敗しました" },
+      { error: "プロフィール取得に失敗しました" },
       { status: 500 }
     );
   }

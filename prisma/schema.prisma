@@ -27,30 +27,26 @@ model Like {
   fromUserId String
   toUserId   String
   createdAt  DateTime @default(now())
-  fromUser   User     @relation("sentLikes", fields: [fromUserId], references: [id], onDelete: Cascade)
-  toUser     User     @relation("receivedLikes", fields: [toUserId], references: [id], onDelete: Cascade)
 
-  @@unique([fromUserId, toUserId])
+  fromUser User @relation("sentLikes", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("receivedLikes", fields: [toUserId], references: [id], onDelete: Cascade)
 }
 
 model Match {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   user1Id   String
   user2Id   String
-  createdAt DateTime  @default(now())
-  user1     User      @relation("matchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
-  user2     User      @relation("matchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
-  messages  Message[]
+  createdAt DateTime @default(now())
 
-  @@unique([user1Id, user2Id])
+  user1 User @relation("matchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2 User @relation("matchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
 }
 
 model Message {
   id        String   @id @default(cuid())
-  matchId   String
-  senderId  String
+  userId    String
   text      String
   createdAt DateTime @default(now())
-  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
