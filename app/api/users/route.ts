@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -22,8 +21,6 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    console.log("POST /api/users body =", body);
-
     const authId = String(body.authId ?? "").trim();
     const email = String(body.email ?? "").trim();
     const name = String(body.name ?? "").trim();
@@ -37,36 +34,47 @@ export async function POST(req: Request) {
       );
     }
 
+    // まず authId で探す
     const existingByAuthId = await prisma.user.findUnique({
       where: { authId },
     });
 
+    if (existingByAuthId) {
+      const updated = await prisma.user.update({
+        where: { authId },
+        data: {
+          email,
+          name,
+          bio,
+          imageUrl,
+        },
+      });
+
+      return NextResponse.json(updated, { status: 200 });
+    }
+
+    // 次に email で探す
     const existingByEmail = await prisma.user.findUnique({
       where: { email },
     });
 
-    console.log("existingByAuthId =", existingByAuthId);
-    console.log("existingByEmail =", existingByEmail);
-
-    if (existingByEmail && existingByEmail.authId !== authId) {
-      return NextResponse.json(
-        {
-          error: "このメールアドレスのプロフィールが既に別のauthIdで存在しています",
-          existingByEmail,
+    if (existingByEmail) {
+      const updated = await prisma.user.update({
+        where: { email },
+        data: {
+          authId,
+          name,
+          bio,
+          imageUrl,
         },
-        { status: 409 }
-      );
+      });
+
+      return NextResponse.json(updated, { status: 200 });
     }
 
-    const user = await prisma.user.upsert({
-      where: { authId },
-      update: {
-        email,
-        name,
-        bio,
-        imageUrl,
-      },
-      create: {
+    // どちらもなければ新規作成
+    const created = await prisma.user.create({
+      data: {
         authId,
         email,
         name,
@@ -75,22 +83,9 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(user, { status: 200 });
+    return NextResponse.json(created, { status: 201 });
   } catch (error) {
     console.error("POST /api/users error:", error);
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return NextResponse.json(
-        {
-          error: "Prismaエラーでユーザー登録に失敗しました",
-          code: error.code,
-          meta: error.meta,
-          message: error.message,
-        },
-        { status: 500 }
-      );
-    }
-
     return NextResponse.json(
       {
         error: "ユーザー登録に失敗しました",
