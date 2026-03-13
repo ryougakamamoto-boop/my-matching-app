@@ -668,7 +668,7 @@ export default function HomePage() {
             lineHeight: 1.2,
           }}
         >
-          スワイプ型マッチングアプリ
+          学生が作ったマッチングアプリ
         </h1>
 
         {view === "loading" && (
@@ -779,7 +779,7 @@ export default function HomePage() {
                 fontSize: 14,
               }}
             >
-              学生が制作したマッチングサイト
+              デモ段階
             </p>
 
             <p style={{ textAlign: "center", marginBottom: 8 }}>
