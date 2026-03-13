@@ -15,11 +15,14 @@ model User {
   bio            String?
   imageUrl       String?
   createdAt      DateTime  @default(now())
+
   sentLikes      Like[]    @relation("sentLikes")
   receivedLikes  Like[]    @relation("receivedLikes")
+
   matchesAsUser1 Match[]   @relation("matchUser1")
   matchesAsUser2 Match[]   @relation("matchUser2")
-  messages       Message[]
+
+  messages       Message[] @relation("MessageSender")
 }
 
 model Like {
@@ -30,23 +33,30 @@ model Like {
 
   fromUser User @relation("sentLikes", fields: [fromUserId], references: [id], onDelete: Cascade)
   toUser   User @relation("receivedLikes", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
 }
 
 model Match {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   user1Id   String
   user2Id   String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
-  user1 User @relation("matchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
-  user2 User @relation("matchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  user1     User      @relation("matchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2     User      @relation("matchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@unique([user1Id, user2Id])
 }
 
 model Message {
   id        String   @id @default(cuid())
-  userId    String
+  matchId   String
+  senderId  String
   text      String
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  sender    User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 }

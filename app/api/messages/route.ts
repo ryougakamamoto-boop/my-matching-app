@@ -60,11 +60,14 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(message, { status: 201 });
-  } catch (error) {
-    console.error("POST /api/messages error:", error);
-    return NextResponse.json(
-      { error: "メッセージ送信に失敗しました" },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+  console.error("GET /api/messages error:", error);
+  return NextResponse.json(
+    {
+      error: "メッセージ取得に失敗しました",
+      detail: error instanceof Error ? error.message : "unknown error",
+    },
+    { status: 500 }
+  );
+}
 }
