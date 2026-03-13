@@ -769,13 +769,21 @@ export default function HomePage() {
 
         {view === "home" && appUser && (
           <>
-            <h2 style={{ textAlign: "center", marginBottom: 20 }}>ホーム</h2>
+            <h2 style={{ textAlign: "center", marginBottom: 8 }}>ホーム</h2>
+
+            <p
+              style={{
+                textAlign: "center",
+                marginBottom: 20,
+                color: "#666",
+                fontSize: 14,
+              }}
+            >
+              学生が制作したマッチングサイト
+            </p>
 
             <p style={{ textAlign: "center", marginBottom: 8 }}>
               ログイン中: {appUser.email}
-            </p>
-            <p style={{ textAlign: "center", marginBottom: 20 }}>
-              ユーザー名: {appUser.name}
             </p>
 
             <div style={{ display: "grid", gap: 12 }}>
