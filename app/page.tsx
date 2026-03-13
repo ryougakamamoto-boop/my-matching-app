@@ -3,6 +3,8 @@
 import TinderCard from "react-tinder-card";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import imageCompression from "browser-image-compression";
+
 
 type View =
   | "loading"
@@ -606,26 +608,44 @@ export default function HomePage() {
           }}
         />
 
-        {isRegister && (
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0] || null;
-              setImageFile(file);
-              setPreviewUrl(file ? URL.createObjectURL(file) : "");
-            }}
-            style={{
-              width: "100%",
-              padding: 10,
-              borderRadius: 12,
-              border: "1px solid #ccc",
-              fontSize: 16,
-              boxSizing: "border-box",
-              background: "#fff",
-            }}
-          />
-        )}
+      {isRegister && (
+  <input
+    type="file"
+    accept="image/*"
+    onChange={async (e) => {
+      const file = e.target.files?.[0] || null;
+
+      if (!file) {
+        setImageFile(null);
+        setPreviewUrl("");
+        return;
+      }
+
+      try {
+        const compressedFile = await imageCompression(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+        });
+
+        setImageFile(compressedFile);
+        setPreviewUrl(URL.createObjectURL(compressedFile));
+      } catch (error) {
+        console.error(error);
+        setMessage("画像の圧縮に失敗しました");
+      }
+    }}
+    style={{
+      width: "100%",
+      padding: 10,
+      borderRadius: 12,
+      border: "1px solid #ccc",
+      fontSize: 16,
+      boxSizing: "border-box",
+      background: "#fff",
+    }}
+  />
+)}
 
         {isRegister && previewUrl && (
           <div style={{ textAlign: "center" }}>
