@@ -1,7 +1,7 @@
 "use client";
 
 import TinderCard from "react-tinder-card";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type View =
@@ -75,6 +75,7 @@ export default function HomePage() {
   const [selectedMatch, setSelectedMatch] = useState<MatchItem | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -82,44 +83,69 @@ export default function HomePage() {
   const currentIndex = people.length - 1;
 
   useEffect(() => {
-    checkSession();
-  }, []);
+  if (view === "chat") {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
+}, [messages, view]);
 
   useEffect(() => {
-    if (view !== "chat" || !selectedMatch) return;
+    checkSession();
+  }, []);
+  useEffect(() => {
+  if (view !== "chat" || !selectedMatch || !appUser) return;
 
-    const channel = supabase
-      .channel(`messages-${selectedMatch.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "Message",
-          filter: `matchId=eq.${selectedMatch.id}`,
-        },
-        async (payload) => {
-          console.log("new message payload =", payload);
+  const channel = supabase
+    .channel(`messages-${selectedMatch.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "Message",
+        filter: `matchId=eq.${selectedMatch.id}`,
+      },
+      (payload) => {
+        console.log("new message payload =", payload);
 
-          const res = await fetch(`/api/messages?matchId=${selectedMatch.id}`, {
-            cache: "no-store",
-          });
+        const newRow = payload.new as {
+          id: string;
+          text: string;
+          createdAt: string;
+          senderId: string;
+          matchId: string;
+        };
 
-          const data = await res.json();
+        setMessages((prev) => {
+          if (prev.some((msg) => msg.id === newRow.id)) return prev;
 
-          if (res.ok && Array.isArray(data)) {
-            setMessages(data);
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log("realtime status =", status);
-      });
+          return [
+            ...prev,
+            {
+              id: newRow.id,
+              text: newRow.text,
+              createdAt: newRow.createdAt,
+              senderId: newRow.senderId,
+              sender: {
+                id: newRow.senderId,
+                name:
+                  newRow.senderId === appUser.id
+                    ? appUser.name
+                    : selectedMatch.partner.name,
+              },
+            },
+          ];
+        });
+      }
+    )
+    .subscribe((status) => {
+      console.log("realtime status =", status);
+    });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [view, selectedMatch]);
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [view, selectedMatch, appUser]);
+
 
   async function checkSession() {
   try {
@@ -1237,7 +1263,7 @@ export default function HomePage() {
                 })
               )}
             </div>
-
+            <div ref={messagesEndRef} />
             <div
               style={{
                 display: "flex",
