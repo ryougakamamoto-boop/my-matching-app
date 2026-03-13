@@ -98,10 +98,13 @@ export default function HomePage() {
           table: "Message",
           filter: `matchId=eq.${selectedMatch.id}`,
         },
-        async () => {
+        async (payload) => {
+          console.log("new message payload =", payload);
+
           const res = await fetch(`/api/messages?matchId=${selectedMatch.id}`, {
             cache: "no-store",
           });
+
           const data = await res.json();
 
           if (res.ok && Array.isArray(data)) {
@@ -109,7 +112,9 @@ export default function HomePage() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("realtime status =", status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -434,36 +439,35 @@ export default function HomePage() {
   }
 
   async function sendMessage() {
-    if (!appUser || !selectedMatch || !newMessage.trim()) return;
+  if (!appUser || !selectedMatch || !newMessage.trim()) return;
 
-    try {
-      const res = await fetch("/api/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          matchId: selectedMatch.id,
-          senderId: appUser.id,
-          text: newMessage.trim(),
-        }),
-      });
+  try {
+    const res = await fetch("/api/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        matchId: selectedMatch.id,
+        senderId: appUser.id,
+        text: newMessage.trim(),
+      }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        setMessage(data.error ?? "送信に失敗しました");
-        return;
-      }
-
-      setMessages((prev) => [...prev, data]);
-      setNewMessage("");
-    } catch (error) {
-      console.error(error);
-      setMessage("送信中にエラーが発生しました");
+    if (!res.ok) {
+      setMessage(data.error ?? "送信に失敗しました");
+      return;
     }
-  }
 
+    setMessages((prev) => [...prev, data]);
+    setNewMessage("");
+  } catch (error) {
+    console.error(error);
+    setMessage("送信中にエラーが発生しました");
+  }
+}
   async function handleSwipeApi(target: AppUser, direction: SwipeDirection) {
     if (!appUser) return;
 
