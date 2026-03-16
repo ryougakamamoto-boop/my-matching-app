@@ -28,7 +28,14 @@ export async function POST(req: Request) {
     const romanticTarget = String(body.romanticTarget ?? "").trim();
 
     const bio = body.bio ? String(body.bio).trim() : null;
-    const imageUrl = body.imageUrl ? String(body.imageUrl).trim() : null;
+
+    const imageUrls = Array.isArray(body.imageUrls)
+      ? body.imageUrls
+          .map((v: unknown) => String(v).trim())
+          .filter((v: string) => v.length > 0)
+          .slice(0, 5)
+      : [];
+
     const hobbies = body.hobbies ? String(body.hobbies).trim() : null;
     const occupation = body.occupation ? String(body.occupation).trim() : null;
     const livingArea = body.livingArea ? String(body.livingArea).trim() : null;
@@ -64,7 +71,7 @@ export async function POST(req: Request) {
         data: {
           email,
           bio,
-          imageUrl,
+          imageUrls,
           height,
           weight,
           hobbies,
@@ -87,7 +94,7 @@ export async function POST(req: Request) {
         data: {
           authId,
           bio,
-          imageUrl,
+          imageUrls,
           height,
           weight,
           hobbies,
@@ -108,7 +115,7 @@ export async function POST(req: Request) {
         biologicalSex,
         romanticTarget,
         bio,
-        imageUrl,
+        imageUrls,
         height,
         weight,
         hobbies,
