@@ -35,14 +35,14 @@ type AppUser = {
   livingArea?: string | null;
   meetingArea?: string | null;
   bio?: string | null;
-  imageUrl?: string | null;
+  imageUrls: string[];
 };
 
 type MatchPartner = {
   id: string;
   name: string;
   bio?: string | null;
-  imageUrl?: string | null;
+  imageUrls?: string[];
 };
 
 type MatchItem = {
@@ -71,7 +71,7 @@ type ReceivedLikeItem = {
     id: string;
     name: string;
     bio?: string | null;
-    imageUrl?: string | null;
+    imageUrls?: string[];
   };
 };
 
@@ -108,8 +108,8 @@ export default function HomePage() {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [newMessage, setNewMessage] = useState("");
 
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -207,7 +207,7 @@ export default function HomePage() {
       livingArea: null,
       meetingArea: null,
       bio: item.fromUser.bio ?? null,
-      imageUrl: item.fromUser.imageUrl ?? null,
+      imageUrls: item.fromUser.imageUrls ?? [],
     };
 
     setPeople([person]);
@@ -226,9 +226,33 @@ export default function HomePage() {
     setOccupation(appUser.occupation ?? "");
     setLivingArea(appUser.livingArea ?? "");
     setMeetingArea(appUser.meetingArea ?? "");
-    setPreviewUrl(appUser.imageUrl ?? "");
-    setImageFile(null);
+    setPreviewUrls(appUser.imageUrls ?? []);
+    setImageFiles([]);
     setView("editProfile");
+  }
+
+  async function uploadMultipleImages(files: File[]) {
+    const uploadedUrls: string[] = [];
+
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const uploadData = await uploadRes.json();
+
+      if (!uploadRes.ok) {
+        throw new Error(uploadData.error ?? "画像アップロードに失敗しました");
+      }
+
+      uploadedUrls.push(uploadData.imageUrl);
+    }
+
+    return uploadedUrls;
   }
 
   async function handleUpdateProfile() {
@@ -238,25 +262,10 @@ export default function HomePage() {
       setLoading(true);
       setMessage("");
 
-      let imageUrl = appUser.imageUrl ?? null;
+      let imageUrls = appUser.imageUrls ?? [];
 
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("file", imageFile);
-
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        const uploadData = await uploadRes.json();
-
-        if (!uploadRes.ok) {
-          setMessage(uploadData.error ?? "画像アップロードに失敗しました");
-          return;
-        }
-
-        imageUrl = uploadData.imageUrl;
+      if (imageFiles.length > 0) {
+        imageUrls = await uploadMultipleImages(imageFiles);
       }
 
       const res = await fetch("/api/users", {
@@ -271,7 +280,7 @@ export default function HomePage() {
           biologicalSex: appUser.biologicalSex,
           romanticTarget: appUser.romanticTarget,
           bio: bio.trim() || null,
-          imageUrl,
+          imageUrls,
           height: height.trim() ? Number(height) : null,
           weight: weight.trim() ? Number(weight) : null,
           hobbies: hobbies.trim() || null,
@@ -289,11 +298,17 @@ export default function HomePage() {
       }
 
       setAppUser(result);
+      setPreviewUrls(result.imageUrls ?? []);
+      setImageFiles([]);
       setMessage("プロフィールを更新しました");
       setView("home");
     } catch (error) {
       console.error(error);
-      setMessage("プロフィール更新中にエラーが発生しました");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "プロフィール更新中にエラーが発生しました"
+      );
     } finally {
       setLoading(false);
     }
@@ -345,7 +360,7 @@ export default function HomePage() {
             biologicalSex: "未設定",
             romanticTarget: "未設定",
             bio: null,
-            imageUrl: null,
+            imageUrls: [],
             height: null,
             weight: null,
             hobbies: null,
@@ -377,7 +392,11 @@ export default function HomePage() {
         return;
       }
 
-      setAppUser(data);
+      setAppUser({
+        ...data,
+        imageUrls: data.imageUrls ?? [],
+      });
+
       await loadReceivedLikes(data.id);
       setView("home");
     } catch (error) {
@@ -407,25 +426,10 @@ export default function HomePage() {
       setLoading(true);
       setMessage("");
 
-      let imageUrl: string | null = null;
+      let imageUrls: string[] = [];
 
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("file", imageFile);
-
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        const uploadData = await uploadRes.json();
-
-        if (!uploadRes.ok) {
-          setMessage(uploadData.error ?? "画像アップロードに失敗しました");
-          return;
-        }
-
-        imageUrl = uploadData.imageUrl;
+      if (imageFiles.length > 0) {
+        imageUrls = await uploadMultipleImages(imageFiles);
       }
 
       const { data, error } = await supabase.auth.signUp({
@@ -455,7 +459,7 @@ export default function HomePage() {
           biologicalSex,
           romanticTarget,
           bio: bio.trim() || null,
-          imageUrl,
+          imageUrls,
           height: height.trim() ? Number(height) : null,
           weight: weight.trim() ? Number(weight) : null,
           hobbies: hobbies.trim() || null,
@@ -485,12 +489,16 @@ export default function HomePage() {
       setOccupation("");
       setLivingArea("");
       setMeetingArea("");
-      setImageFile(null);
-      setPreviewUrl("");
+      setImageFiles([]);
+      setPreviewUrls([]);
       setView("login");
     } catch (error) {
       console.error(error);
-      setMessage("登録中にエラーが発生しました");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "登録中にエラーが発生しました"
+      );
     } finally {
       setLoading(false);
     }
@@ -568,7 +576,12 @@ export default function HomePage() {
         return;
       }
 
-      setPeople(data);
+      setPeople(
+        data.map((item: AppUser) => ({
+          ...item,
+          imageUrls: item.imageUrls ?? [],
+        }))
+      );
       setLastDirection("");
       setOverlay("");
       setView("swipe");
@@ -732,6 +745,64 @@ export default function HomePage() {
 
     await handleSwipeApi(user, dir);
     setPeople((prev) => prev.slice(0, -1));
+  }
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).slice(0, 5);
+
+    if (files.length === 0) {
+      setImageFiles([]);
+      setPreviewUrls([]);
+      return;
+    }
+
+    try {
+      const compressedFiles: File[] = [];
+
+      for (const file of files) {
+        const compressedFile = await imageCompression(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+        });
+
+        compressedFiles.push(compressedFile as File);
+      }
+
+      setImageFiles(compressedFiles);
+      setPreviewUrls(compressedFiles.map((file) => URL.createObjectURL(file)));
+    } catch (error) {
+      console.error(error);
+      setMessage("画像の圧縮に失敗しました");
+    }
+  }
+
+  function renderPreviewGrid() {
+    if (previewUrls.length === 0) return null;
+
+    return (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 8,
+        }}
+      >
+        {previewUrls.map((url, index) => (
+          <img
+            key={index}
+            src={url}
+            alt={`preview-${index}`}
+            style={{
+              width: "100%",
+              aspectRatio: "1 / 1",
+              objectFit: "cover",
+              borderRadius: 12,
+            }}
+          />
+        ))}
+      </div>
+    );
   }
 
   function renderAuthInputs(isRegister: boolean) {
@@ -928,58 +999,24 @@ export default function HomePage() {
         )}
 
         {isRegister && (
-          <input
-            type="file"
-            accept="image/*"
-            onChange={async (e) => {
-              const file = e.target.files?.[0] || null;
-
-              if (!file) {
-                setImageFile(null);
-                setPreviewUrl("");
-                return;
-              }
-
-              try {
-                const compressedFile = await imageCompression(file, {
-                  maxSizeMB: 1,
-                  maxWidthOrHeight: 1200,
-                  useWebWorker: true,
-                });
-
-                setImageFile(compressedFile as File);
-                setPreviewUrl(URL.createObjectURL(compressedFile));
-              } catch (error) {
-                console.error(error);
-                setMessage("画像の圧縮に失敗しました");
-              }
-            }}
-            style={{
-              width: "100%",
-              padding: 10,
-              borderRadius: 12,
-              border: "1px solid #ccc",
-              fontSize: 16,
-              boxSizing: "border-box",
-              background: "#fff",
-            }}
-          />
-        )}
-
-        {isRegister && previewUrl && (
-          <div style={{ textAlign: "center" }}>
-            <img
-              src={previewUrl}
-              alt="preview"
+          <>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageChange}
               style={{
-                width: 100,
-                height: 100,
-                borderRadius: "50%",
-                objectFit: "cover",
-                marginTop: 8,
+                width: "100%",
+                padding: 10,
+                borderRadius: 12,
+                border: "1px solid #ccc",
+                fontSize: 16,
+                boxSizing: "border-box",
+                background: "#fff",
               }}
             />
-          </div>
+            {renderPreviewGrid()}
+          </>
         )}
 
         {isRegister && (
@@ -1433,28 +1470,8 @@ export default function HomePage() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0] || null;
-
-                  if (!file) {
-                    setImageFile(null);
-                    return;
-                  }
-
-                  try {
-                    const compressedFile = await imageCompression(file, {
-                      maxSizeMB: 1,
-                      maxWidthOrHeight: 1200,
-                      useWebWorker: true,
-                    });
-
-                    setImageFile(compressedFile as File);
-                    setPreviewUrl(URL.createObjectURL(compressedFile));
-                  } catch (error) {
-                    console.error(error);
-                    setMessage("画像の圧縮に失敗しました");
-                  }
-                }}
+                multiple
+                onChange={handleImageChange}
                 style={{
                   width: "100%",
                   padding: 10,
@@ -1466,20 +1483,7 @@ export default function HomePage() {
                 }}
               />
 
-              {previewUrl && (
-                <div style={{ textAlign: "center" }}>
-                  <img
-                    src={previewUrl}
-                    alt="preview"
-                    style={{
-                      width: 120,
-                      height: 120,
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                    }}
-                  />
-                </div>
-              )}
+              {renderPreviewGrid()}
 
               <textarea
                 placeholder="自己紹介"
@@ -1573,9 +1577,10 @@ export default function HomePage() {
                         justifyContent: "center",
                       }}
                     >
-                      {item.fromUser.imageUrl ? (
+                      {item.fromUser.imageUrls &&
+                      item.fromUser.imageUrls.length > 0 ? (
                         <img
-                          src={item.fromUser.imageUrl}
+                          src={item.fromUser.imageUrls[0]}
                           alt={item.fromUser.name}
                           style={{
                             width: "100%",
@@ -1720,9 +1725,9 @@ export default function HomePage() {
                             overflow: "hidden",
                           }}
                         >
-                          {person.imageUrl ? (
+                          {person.imageUrls && person.imageUrls.length > 0 ? (
                             <img
-                              src={person.imageUrl}
+                              src={person.imageUrls[0]}
                               alt={person.name}
                               style={{
                                 width: "100%",
@@ -1920,9 +1925,10 @@ export default function HomePage() {
                         justifyContent: "center",
                       }}
                     >
-                      {item.partner.imageUrl ? (
+                      {item.partner.imageUrls &&
+                      item.partner.imageUrls.length > 0 ? (
                         <img
-                          src={item.partner.imageUrl}
+                          src={item.partner.imageUrls[0]}
                           alt={item.partner.name}
                           style={{
                             width: "100%",

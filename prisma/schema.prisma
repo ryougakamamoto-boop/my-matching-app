@@ -21,7 +21,7 @@ model User {
   livingArea     String?
   meetingArea    String?
   bio            String?
-  imageUrl       String?
+  imageUrls String[]
   createdAt      DateTime @default(now())
 
   sentLikes      Like[]    @relation("sentLikes")
