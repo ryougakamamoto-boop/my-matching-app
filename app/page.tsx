@@ -12,7 +12,8 @@ type View =
   | "home"
   | "swipe"
   | "matches"
-  | "chat";
+  | "chat"
+  | "receivedLikes";
 
 type AuthUser = {
   id: string;
@@ -177,6 +178,22 @@ export default function HomePage() {
     }
   }
 
+  function openLikedPerson(item: ReceivedLikeItem) {
+    const person: AppUser = {
+      id: item.fromUser.id,
+      authId: "",
+      email: "",
+      name: item.fromUser.name,
+      bio: item.fromUser.bio ?? null,
+      imageUrl: item.fromUser.imageUrl ?? null,
+    };
+
+    setPeople([person]);
+    setLastDirection("");
+    setOverlay("");
+    setView("swipe");
+  }
+
   async function checkSession() {
     try {
       setView("loading");
@@ -213,10 +230,7 @@ export default function HomePage() {
         }
       );
 
-      console.log("/api/users/me status =", res.status);
-
       let data = await res.json();
-      console.log("/api/users/me data =", data);
 
       if (res.status === 404) {
         const createRes = await fetch("/api/users", {
@@ -233,10 +247,7 @@ export default function HomePage() {
           }),
         });
 
-        console.log("/api/users POST status =", createRes.status);
-
         const createData = await createRes.json();
-        console.log("/api/users POST data =", createData);
 
         if (!createRes.ok) {
           setMessage(createData.error ?? "プロフィール作成に失敗しました");
@@ -249,10 +260,7 @@ export default function HomePage() {
           { cache: "no-store" }
         );
 
-        console.log("retry /api/users/me status =", res.status);
-
         data = await res.json();
-        console.log("retry /api/users/me data =", data);
       }
 
       if (!res.ok) {
@@ -559,8 +567,9 @@ export default function HomePage() {
 
       if (action === "like" && data.matched) {
         alert("マッチしました！");
-        await loadReceivedLikes(appUser.id);
       }
+
+      await loadReceivedLikes(appUser.id);
     } catch (error) {
       console.error(error);
       alert("通信エラーが発生しました");
@@ -870,20 +879,40 @@ export default function HomePage() {
             </p>
 
             {receivedLikes.length > 0 && (
-              <div
-                style={{
-                  background: "#fff7ed",
-                  border: "1px solid #fdba74",
-                  color: "#9a3412",
-                  padding: 12,
-                  borderRadius: 14,
-                  marginBottom: 16,
-                  textAlign: "center",
-                  fontWeight: "bold",
-                }}
-              >
-                あなたに {receivedLikes.length} 件のいいねが来ています
-              </div>
+              <>
+                <div
+                  style={{
+                    background: "#fff7ed",
+                    border: "1px solid #fdba74",
+                    color: "#9a3412",
+                    padding: 12,
+                    borderRadius: 14,
+                    marginBottom: 16,
+                    textAlign: "center",
+                    fontWeight: "bold",
+                  }}
+                >
+                  あなたに {receivedLikes.length} 件のいいねが来ています
+                </div>
+
+                <button
+                  onClick={() => setView("receivedLikes")}
+                  style={{
+                    width: "100%",
+                    padding: "14px 20px",
+                    borderRadius: 999,
+                    border: "none",
+                    background: "#f59e0b",
+                    color: "#fff",
+                    fontWeight: "bold",
+                    fontSize: 16,
+                    cursor: "pointer",
+                    marginBottom: 16,
+                  }}
+                >
+                  いいねしてきた人を見る
+                </button>
+              </>
             )}
 
             <p style={{ textAlign: "center", marginBottom: 8 }}>
@@ -942,6 +971,107 @@ export default function HomePage() {
                 ログアウト
               </button>
             </div>
+          </>
+        )}
+
+        {view === "receivedLikes" && appUser && (
+          <>
+            <div style={{ marginBottom: 16 }}>
+              <button
+                onClick={() => setView("home")}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: "#2563eb",
+                  cursor: "pointer",
+                  fontSize: 16,
+                  padding: 0,
+                }}
+              >
+                ← ホームに戻る
+              </button>
+            </div>
+
+            <h2 style={{ textAlign: "center", marginBottom: 20 }}>
+              いいねしてきた人
+            </h2>
+
+            {receivedLikes.length === 0 ? (
+              <p style={{ textAlign: "center" }}>まだいいねは来ていません</p>
+            ) : (
+              <div style={{ display: "grid", gap: 14 }}>
+                {receivedLikes.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => openLikedPerson(item)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 14,
+                      background: "#f9fafb",
+                      borderRadius: 16,
+                      padding: 14,
+                      border: "none",
+                      width: "100%",
+                      textAlign: "left",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: "50%",
+                        background: "#e5e7eb",
+                        overflow: "hidden",
+                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {item.fromUser.imageUrl ? (
+                        <img
+                          src={item.fromUser.imageUrl}
+                          alt={item.fromUser.name}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: 28 }}>👤</span>
+                      )}
+                    </div>
+
+                    <div style={{ minWidth: 0 }}>
+                      <h3
+                        style={{
+                          margin: "0 0 8px",
+                          fontSize: 20,
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {item.fromUser.name}
+                      </h3>
+                      <p
+                        style={{
+                          margin: "0 0 8px",
+                          color: "#555",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {item.fromUser.bio || "自己紹介はまだありません"}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 14, color: "#888" }}>
+                        タップしてこの人を見る
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </>
         )}
 
