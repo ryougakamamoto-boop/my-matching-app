@@ -24,17 +24,36 @@ export async function POST(req: Request) {
     const authId = String(body.authId ?? "").trim();
     const email = String(body.email ?? "").trim();
     const name = String(body.name ?? "").trim();
+    const biologicalSex = String(body.biologicalSex ?? "").trim();
+    const romanticTarget = String(body.romanticTarget ?? "").trim();
+
     const bio = body.bio ? String(body.bio).trim() : null;
     const imageUrl = body.imageUrl ? String(body.imageUrl).trim() : null;
+    const hobbies = body.hobbies ? String(body.hobbies).trim() : null;
+    const occupation = body.occupation ? String(body.occupation).trim() : null;
+    const livingArea = body.livingArea ? String(body.livingArea).trim() : null;
+    const meetingArea = body.meetingArea ? String(body.meetingArea).trim() : null;
 
-    if (!authId || !email || !name) {
+    const height =
+      body.height !== undefined && body.height !== null && body.height !== ""
+        ? Number(body.height)
+        : null;
+
+    const weight =
+      body.weight !== undefined && body.weight !== null && body.weight !== ""
+        ? Number(body.weight)
+        : null;
+
+    if (!authId || !email || !name || !biologicalSex || !romanticTarget) {
       return NextResponse.json(
-        { error: "authId, email, name は必須です" },
+        {
+          error:
+            "authId, email, name, biologicalSex, romanticTarget は必須です",
+        },
         { status: 400 }
       );
     }
 
-    // まず authId で探す
     const existingByAuthId = await prisma.user.findUnique({
       where: { authId },
     });
@@ -44,16 +63,20 @@ export async function POST(req: Request) {
         where: { authId },
         data: {
           email,
-          name,
           bio,
           imageUrl,
+          height,
+          weight,
+          hobbies,
+          occupation,
+          livingArea,
+          meetingArea,
         },
       });
 
       return NextResponse.json(updated, { status: 200 });
     }
 
-    // 次に email で探す
     const existingByEmail = await prisma.user.findUnique({
       where: { email },
     });
@@ -63,23 +86,35 @@ export async function POST(req: Request) {
         where: { email },
         data: {
           authId,
-          name,
           bio,
           imageUrl,
+          height,
+          weight,
+          hobbies,
+          occupation,
+          livingArea,
+          meetingArea,
         },
       });
 
       return NextResponse.json(updated, { status: 200 });
     }
 
-    // どちらもなければ新規作成
     const created = await prisma.user.create({
       data: {
         authId,
         email,
         name,
+        biologicalSex,
+        romanticTarget,
         bio,
         imageUrl,
+        height,
+        weight,
+        hobbies,
+        occupation,
+        livingArea,
+        meetingArea,
       },
     });
 

@@ -13,7 +13,8 @@ type View =
   | "swipe"
   | "matches"
   | "chat"
-  | "receivedLikes";
+  | "receivedLikes"
+  | "editProfile";
 
 type AuthUser = {
   id: string;
@@ -25,6 +26,14 @@ type AppUser = {
   authId: string;
   email: string;
   name: string;
+  biologicalSex: string;
+  romanticTarget: string;
+  height?: number | null;
+  weight?: number | null;
+  hobbies?: string | null;
+  occupation?: string | null;
+  livingArea?: string | null;
+  meetingArea?: string | null;
   bio?: string | null;
   imageUrl?: string | null;
 };
@@ -77,6 +86,15 @@ export default function HomePage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [biologicalSex, setBiologicalSex] = useState("");
+  const [romanticTarget, setRomanticTarget] = useState("");
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
+  const [hobbies, setHobbies] = useState("");
+  const [occupation, setOccupation] = useState("");
+  const [livingArea, setLivingArea] = useState("");
+  const [meetingArea, setMeetingArea] = useState("");
+
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -121,8 +139,6 @@ export default function HomePage() {
           filter: `matchId=eq.${selectedMatch.id}`,
         },
         (payload) => {
-          console.log("new message payload =", payload);
-
           const newRow = payload.new as {
             id: string;
             text: string;
@@ -153,9 +169,7 @@ export default function HomePage() {
           });
         }
       )
-      .subscribe((status) => {
-        console.log("realtime status =", status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -184,6 +198,14 @@ export default function HomePage() {
       authId: "",
       email: "",
       name: item.fromUser.name,
+      biologicalSex: "",
+      romanticTarget: "",
+      height: null,
+      weight: null,
+      hobbies: null,
+      occupation: null,
+      livingArea: null,
+      meetingArea: null,
       bio: item.fromUser.bio ?? null,
       imageUrl: item.fromUser.imageUrl ?? null,
     };
@@ -192,6 +214,89 @@ export default function HomePage() {
     setLastDirection("");
     setOverlay("");
     setView("swipe");
+  }
+
+  function openEditProfile() {
+    if (!appUser) return;
+
+    setBio(appUser.bio ?? "");
+    setHeight(appUser.height ? String(appUser.height) : "");
+    setWeight(appUser.weight ? String(appUser.weight) : "");
+    setHobbies(appUser.hobbies ?? "");
+    setOccupation(appUser.occupation ?? "");
+    setLivingArea(appUser.livingArea ?? "");
+    setMeetingArea(appUser.meetingArea ?? "");
+    setPreviewUrl(appUser.imageUrl ?? "");
+    setImageFile(null);
+    setView("editProfile");
+  }
+
+  async function handleUpdateProfile() {
+    if (!appUser || !authUser) return;
+
+    try {
+      setLoading(true);
+      setMessage("");
+
+      let imageUrl = appUser.imageUrl ?? null;
+
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("file", imageFile);
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const uploadData = await uploadRes.json();
+
+        if (!uploadRes.ok) {
+          setMessage(uploadData.error ?? "画像アップロードに失敗しました");
+          return;
+        }
+
+        imageUrl = uploadData.imageUrl;
+      }
+
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          authId: authUser.id,
+          email: appUser.email,
+          name: appUser.name,
+          biologicalSex: appUser.biologicalSex,
+          romanticTarget: appUser.romanticTarget,
+          bio: bio.trim() || null,
+          imageUrl,
+          height: height.trim() ? Number(height) : null,
+          weight: weight.trim() ? Number(weight) : null,
+          hobbies: hobbies.trim() || null,
+          occupation: occupation.trim() || null,
+          livingArea: livingArea.trim() || null,
+          meetingArea: meetingArea.trim() || null,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setMessage(result.error ?? "プロフィール更新に失敗しました");
+        return;
+      }
+
+      setAppUser(result);
+      setMessage("プロフィールを更新しました");
+      setView("home");
+    } catch (error) {
+      console.error(error);
+      setMessage("プロフィール更新中にエラーが発生しました");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function checkSession() {
@@ -203,9 +308,6 @@ export default function HomePage() {
         data: { user },
         error: authError,
       } = await supabase.auth.getUser();
-
-      console.log("getUser user =", user);
-      console.log("getUser error =", authError);
 
       if (authError) {
         throw new Error(authError.message);
@@ -225,9 +327,7 @@ export default function HomePage() {
 
       let res = await fetch(
         `/api/users/me?authId=${encodeURIComponent(user.id)}`,
-        {
-          cache: "no-store",
-        }
+        { cache: "no-store" }
       );
 
       let data = await res.json();
@@ -242,8 +342,16 @@ export default function HomePage() {
             authId: user.id,
             email: user.email,
             name: user.email?.split("@")[0] || "user",
+            biologicalSex: "未設定",
+            romanticTarget: "未設定",
             bio: null,
             imageUrl: null,
+            height: null,
+            weight: null,
+            hobbies: null,
+            occupation: null,
+            livingArea: null,
+            meetingArea: null,
           }),
         });
 
@@ -284,8 +392,14 @@ export default function HomePage() {
   }
 
   async function handleRegister() {
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setMessage("名前・メール・パスワードを入力してください");
+    if (
+      !name.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !biologicalSex ||
+      !romanticTarget
+    ) {
+      setMessage("名前・メール・パスワード・性別・恋愛対象を入力してください");
       return;
     }
 
@@ -338,8 +452,16 @@ export default function HomePage() {
           authId: data.user.id,
           email: email.trim(),
           name: name.trim(),
+          biologicalSex,
+          romanticTarget,
           bio: bio.trim() || null,
           imageUrl,
+          height: height.trim() ? Number(height) : null,
+          weight: weight.trim() ? Number(weight) : null,
+          hobbies: hobbies.trim() || null,
+          occupation: occupation.trim() || null,
+          livingArea: livingArea.trim() || null,
+          meetingArea: meetingArea.trim() || null,
         }),
       });
 
@@ -355,6 +477,14 @@ export default function HomePage() {
       setBio("");
       setEmail("");
       setPassword("");
+      setBiologicalSex("");
+      setRomanticTarget("");
+      setHeight("");
+      setWeight("");
+      setHobbies("");
+      setOccupation("");
+      setLivingArea("");
+      setMeetingArea("");
       setImageFile(null);
       setPreviewUrl("");
       setView("login");
@@ -624,6 +754,47 @@ export default function HomePage() {
           />
         )}
 
+        {isRegister && (
+          <select
+            value={biologicalSex}
+            onChange={(e) => setBiologicalSex(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 14,
+              borderRadius: 12,
+              border: "1px solid #ccc",
+              fontSize: 16,
+              boxSizing: "border-box",
+              background: "#fff",
+            }}
+          >
+            <option value="">生物学的性別を選択</option>
+            <option value="男">男</option>
+            <option value="女">女</option>
+          </select>
+        )}
+
+        {isRegister && (
+          <select
+            value={romanticTarget}
+            onChange={(e) => setRomanticTarget(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 14,
+              borderRadius: 12,
+              border: "1px solid #ccc",
+              fontSize: 16,
+              boxSizing: "border-box",
+              background: "#fff",
+            }}
+          >
+            <option value="">恋愛対象を選択</option>
+            <option value="男">男</option>
+            <option value="女">女</option>
+            <option value="両方">両方</option>
+          </select>
+        )}
+
         <input
           type="email"
           placeholder="メールアドレス"
@@ -653,6 +824,108 @@ export default function HomePage() {
             boxSizing: "border-box",
           }}
         />
+
+        {isRegister && (
+          <input
+            type="number"
+            placeholder="身長(cm)"
+            value={height}
+            onChange={(e) => setHeight(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 14,
+              borderRadius: 12,
+              border: "1px solid #ccc",
+              fontSize: 16,
+              boxSizing: "border-box",
+            }}
+          />
+        )}
+
+        {isRegister && (
+          <input
+            type="number"
+            placeholder="体重(kg)"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 14,
+              borderRadius: 12,
+              border: "1px solid #ccc",
+              fontSize: 16,
+              boxSizing: "border-box",
+            }}
+          />
+        )}
+
+        {isRegister && (
+          <input
+            type="text"
+            placeholder="趣味"
+            value={hobbies}
+            onChange={(e) => setHobbies(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 14,
+              borderRadius: 12,
+              border: "1px solid #ccc",
+              fontSize: 16,
+              boxSizing: "border-box",
+            }}
+          />
+        )}
+
+        {isRegister && (
+          <input
+            type="text"
+            placeholder="職業"
+            value={occupation}
+            onChange={(e) => setOccupation(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 14,
+              borderRadius: 12,
+              border: "1px solid #ccc",
+              fontSize: 16,
+              boxSizing: "border-box",
+            }}
+          />
+        )}
+
+        {isRegister && (
+          <input
+            type="text"
+            placeholder="住んでいる地域"
+            value={livingArea}
+            onChange={(e) => setLivingArea(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 14,
+              borderRadius: 12,
+              border: "1px solid #ccc",
+              fontSize: 16,
+              boxSizing: "border-box",
+            }}
+          />
+        )}
+
+        {isRegister && (
+          <input
+            type="text"
+            placeholder="会える地域"
+            value={meetingArea}
+            onChange={(e) => setMeetingArea(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 14,
+              borderRadius: 12,
+              border: "1px solid #ccc",
+              fontSize: 16,
+              boxSizing: "border-box",
+            }}
+          />
+        )}
 
         {isRegister && (
           <input
@@ -918,11 +1191,33 @@ export default function HomePage() {
             <p style={{ textAlign: "center", marginBottom: 8 }}>
               ログイン中: {appUser.email}
             </p>
-            <p style={{ textAlign: "center", marginBottom: 20 }}>
+            <p style={{ textAlign: "center", marginBottom: 8 }}>
               ユーザー名: {appUser.name}
+            </p>
+            <p style={{ textAlign: "center", marginBottom: 8 }}>
+              性別: {appUser.biologicalSex}
+            </p>
+            <p style={{ textAlign: "center", marginBottom: 20 }}>
+              恋愛対象: {appUser.romanticTarget}
             </p>
 
             <div style={{ display: "grid", gap: 12 }}>
+              <button
+                onClick={openEditProfile}
+                style={{
+                  padding: "14px 20px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#10b981",
+                  color: "#fff",
+                  fontWeight: "bold",
+                  fontSize: 16,
+                  cursor: "pointer",
+                }}
+              >
+                プロフィール編集
+              </button>
+
               <button
                 onClick={openSwipe}
                 style={{
@@ -969,6 +1264,254 @@ export default function HomePage() {
                 }}
               >
                 ログアウト
+              </button>
+            </div>
+          </>
+        )}
+
+        {view === "editProfile" && appUser && (
+          <>
+            <div style={{ marginBottom: 16 }}>
+              <button
+                onClick={() => setView("home")}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: "#2563eb",
+                  cursor: "pointer",
+                  fontSize: 16,
+                  padding: 0,
+                }}
+              >
+                ← ホームに戻る
+              </button>
+            </div>
+
+            <h2 style={{ textAlign: "center", marginBottom: 20 }}>
+              プロフィール編集
+            </h2>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              <input
+                type="text"
+                value={appUser.name}
+                disabled
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #ddd",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                  background: "#f3f4f6",
+                  color: "#666",
+                }}
+              />
+
+              <input
+                type="text"
+                value={appUser.biologicalSex}
+                disabled
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #ddd",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                  background: "#f3f4f6",
+                  color: "#666",
+                }}
+              />
+
+              <input
+                type="text"
+                value={appUser.romanticTarget}
+                disabled
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #ddd",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                  background: "#f3f4f6",
+                  color: "#666",
+                }}
+              />
+
+              <input
+                type="number"
+                placeholder="身長(cm)"
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <input
+                type="number"
+                placeholder="体重(kg)"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <input
+                type="text"
+                placeholder="趣味"
+                value={hobbies}
+                onChange={(e) => setHobbies(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <input
+                type="text"
+                placeholder="職業"
+                value={occupation}
+                onChange={(e) => setOccupation(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <input
+                type="text"
+                placeholder="住んでいる地域"
+                value={livingArea}
+                onChange={(e) => setLivingArea(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <input
+                type="text"
+                placeholder="会える地域"
+                value={meetingArea}
+                onChange={(e) => setMeetingArea(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0] || null;
+
+                  if (!file) {
+                    setImageFile(null);
+                    return;
+                  }
+
+                  try {
+                    const compressedFile = await imageCompression(file, {
+                      maxSizeMB: 1,
+                      maxWidthOrHeight: 1200,
+                      useWebWorker: true,
+                    });
+
+                    setImageFile(compressedFile as File);
+                    setPreviewUrl(URL.createObjectURL(compressedFile));
+                  } catch (error) {
+                    console.error(error);
+                    setMessage("画像の圧縮に失敗しました");
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 12,
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                  background: "#fff",
+                }}
+              />
+
+              {previewUrl && (
+                <div style={{ textAlign: "center" }}>
+                  <img
+                    src={previewUrl}
+                    alt="preview"
+                    style={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
+              )}
+
+              <textarea
+                placeholder="自己紹介"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows={4}
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  resize: "vertical",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <button
+                onClick={handleUpdateProfile}
+                disabled={loading}
+                style={{
+                  padding: "14px 20px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#10b981",
+                  color: "#fff",
+                  fontWeight: "bold",
+                  fontSize: 16,
+                  cursor: "pointer",
+                }}
+              >
+                {loading ? "更新中..." : "プロフィールを更新する"}
               </button>
             </div>
           </>
@@ -1210,7 +1753,7 @@ export default function HomePage() {
 
                           <p
                             style={{
-                              margin: 0,
+                              margin: "0 0 8px",
                               color: "#555",
                               fontSize: 16,
                               lineHeight: 1.5,
@@ -1219,6 +1762,42 @@ export default function HomePage() {
                           >
                             {person.bio || "自己紹介はまだありません"}
                           </p>
+
+                          {person.height ? (
+                            <p style={{ margin: "0 0 6px", color: "#555" }}>
+                              身長: {person.height}cm
+                            </p>
+                          ) : null}
+
+                          {person.weight ? (
+                            <p style={{ margin: "0 0 6px", color: "#555" }}>
+                              体重: {person.weight}kg
+                            </p>
+                          ) : null}
+
+                          {person.hobbies ? (
+                            <p style={{ margin: "0 0 6px", color: "#555" }}>
+                              趣味: {person.hobbies}
+                            </p>
+                          ) : null}
+
+                          {person.occupation ? (
+                            <p style={{ margin: "0 0 6px", color: "#555" }}>
+                              職業: {person.occupation}
+                            </p>
+                          ) : null}
+
+                          {person.livingArea ? (
+                            <p style={{ margin: "0 0 6px", color: "#555" }}>
+                              住んでいる地域: {person.livingArea}
+                            </p>
+                          ) : null}
+
+                          {person.meetingArea ? (
+                            <p style={{ margin: "0 0 6px", color: "#555" }}>
+                              会える地域: {person.meetingArea}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
                     </TinderCard>
