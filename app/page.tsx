@@ -2,9 +2,8 @@
 
 import TinderCard from "react-tinder-card";
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import imageCompression from "browser-image-compression";
-
+import { supabase } from "@/lib/supabase";
 
 type View =
   | "loading"
@@ -55,6 +54,17 @@ type MessageItem = {
 
 type SwipeDirection = "left" | "right" | "up" | "down";
 
+type ReceivedLikeItem = {
+  id: string;
+  createdAt: string;
+  fromUser: {
+    id: string;
+    name: string;
+    bio?: string | null;
+    imageUrl?: string | null;
+  };
+};
+
 export default function HomePage() {
   const [view, setView] = useState<View>("loading");
 
@@ -71,178 +81,199 @@ export default function HomePage() {
 
   const [people, setPeople] = useState<AppUser[]>([]);
   const [matches, setMatches] = useState<MatchItem[]>([]);
+  const [receivedLikes, setReceivedLikes] = useState<ReceivedLikeItem[]>([]);
   const [lastDirection, setLastDirection] = useState("");
   const [overlay, setOverlay] = useState<"" | "LIKE" | "NOPE">("");
 
   const [selectedMatch, setSelectedMatch] = useState<MatchItem | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
 
-  const currentIndex = people.length - 1;
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-  if (view === "chat") {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }
-}, [messages, view]);
+  const currentIndex = people.length - 1;
 
   useEffect(() => {
     checkSession();
   }, []);
+
   useEffect(() => {
-  if (view !== "chat" || !selectedMatch || !appUser) return;
-
-  const channel = supabase
-    .channel(`messages-${selectedMatch.id}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "Message",
-        filter: `matchId=eq.${selectedMatch.id}`,
-      },
-      (payload) => {
-        console.log("new message payload =", payload);
-
-        const newRow = payload.new as {
-          id: string;
-          text: string;
-          createdAt: string;
-          senderId: string;
-          matchId: string;
-        };
-
-        setMessages((prev) => {
-          if (prev.some((msg) => msg.id === newRow.id)) return prev;
-
-          return [
-            ...prev,
-            {
-              id: newRow.id,
-              text: newRow.text,
-              createdAt: newRow.createdAt,
-              senderId: newRow.senderId,
-              sender: {
-                id: newRow.senderId,
-                name:
-                  newRow.senderId === appUser.id
-                    ? appUser.name
-                    : selectedMatch.partner.name,
-              },
-            },
-          ];
-        });
-      }
-    )
-    .subscribe((status) => {
-      console.log("realtime status =", status);
-    });
-
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [view, selectedMatch, appUser]);
-
-
-  async function checkSession() {
-  try {
-    setView("loading");
-    setMessage("");
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    console.log("getUser user =", user);
-    console.log("getUser error =", authError);
-
-    if (authError) {
-      throw new Error(authError.message);
+    if (view === "chat") {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
+  }, [messages, view]);
 
-    if (!user) {
-      setAuthUser(null);
-      setAppUser(null);
-      setView("login");
-      return;
-    }
+  useEffect(() => {
+    if (view !== "chat" || !selectedMatch || !appUser) return;
 
-    setAuthUser({
-      id: user.id,
-      email: user.email,
-    });
-
-    let res = await fetch(
-      `/api/users/me?authId=${encodeURIComponent(user.id)}`,
-      { cache: "no-store" }
-    );
-
-    console.log("/api/users/me status =", res.status);
-
-    let data = await res.json();
-    console.log("/api/users/me data =", data);
-
-    if (res.status === 404) {
-      const createRes = await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    const channel = supabase
+      .channel(`messages-${selectedMatch.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "Message",
+          filter: `matchId=eq.${selectedMatch.id}`,
         },
-        body: JSON.stringify({
-          authId: user.id,
-          email: user.email,
-          name: user.email?.split("@")[0] || "user",
-          bio: null,
-          imageUrl: null,
-        }),
+        (payload) => {
+          console.log("new message payload =", payload);
+
+          const newRow = payload.new as {
+            id: string;
+            text: string;
+            createdAt: string;
+            senderId: string;
+            matchId: string;
+          };
+
+          setMessages((prev) => {
+            if (prev.some((msg) => msg.id === newRow.id)) return prev;
+
+            return [
+              ...prev,
+              {
+                id: newRow.id,
+                text: newRow.text,
+                createdAt: newRow.createdAt,
+                senderId: newRow.senderId,
+                sender: {
+                  id: newRow.senderId,
+                  name:
+                    newRow.senderId === appUser.id
+                      ? appUser.name
+                      : selectedMatch.partner.name,
+                },
+              },
+            ];
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log("realtime status =", status);
       });
 
-      console.log("/api/users POST status =", createRes.status);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [view, selectedMatch, appUser]);
 
-      const createData = await createRes.json();
-      console.log("/api/users POST data =", createData);
+  async function loadReceivedLikes(userId: string) {
+    try {
+      const res = await fetch(`/api/likes/received?currentUserId=${userId}`, {
+        cache: "no-store",
+      });
 
-      if (!createRes.ok) {
-        setMessage(createData.error ?? "プロフィール作成に失敗しました");
+      const data = await res.json();
+
+      if (res.ok && Array.isArray(data)) {
+        setReceivedLikes(data);
+      }
+    } catch (error) {
+      console.error("loadReceivedLikes error =", error);
+    }
+  }
+
+  async function checkSession() {
+    try {
+      setView("loading");
+      setMessage("");
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      console.log("getUser user =", user);
+      console.log("getUser error =", authError);
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      if (!user) {
+        setAuthUser(null);
+        setAppUser(null);
         setView("login");
         return;
       }
 
-      res = await fetch(
+      setAuthUser({
+        id: user.id,
+        email: user.email,
+      });
+
+      let res = await fetch(
         `/api/users/me?authId=${encodeURIComponent(user.id)}`,
-        { cache: "no-store" }
+        {
+          cache: "no-store",
+        }
       );
 
-      console.log("retry /api/users/me status =", res.status);
+      console.log("/api/users/me status =", res.status);
 
-      data = await res.json();
-      console.log("retry /api/users/me data =", data);
-    }
+      let data = await res.json();
+      console.log("/api/users/me data =", data);
 
-    if (!res.ok) {
-      setMessage(data.error ?? "ユーザー取得に失敗しました");
+      if (res.status === 404) {
+        const createRes = await fetch("/api/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            authId: user.id,
+            email: user.email,
+            name: user.email?.split("@")[0] || "user",
+            bio: null,
+            imageUrl: null,
+          }),
+        });
+
+        console.log("/api/users POST status =", createRes.status);
+
+        const createData = await createRes.json();
+        console.log("/api/users POST data =", createData);
+
+        if (!createRes.ok) {
+          setMessage(createData.error ?? "プロフィール作成に失敗しました");
+          setView("login");
+          return;
+        }
+
+        res = await fetch(
+          `/api/users/me?authId=${encodeURIComponent(user.id)}`,
+          { cache: "no-store" }
+        );
+
+        console.log("retry /api/users/me status =", res.status);
+
+        data = await res.json();
+        console.log("retry /api/users/me data =", data);
+      }
+
+      if (!res.ok) {
+        setMessage(data.error ?? "ユーザー取得に失敗しました");
+        setView("login");
+        return;
+      }
+
+      setAppUser(data);
+      await loadReceivedLikes(data.id);
+      setView("home");
+    } catch (error) {
+      console.error("checkSession error =", error);
+      setMessage(
+        error instanceof Error
+          ? `セッション確認に失敗しました: ${error.message}`
+          : "セッション確認に失敗しました"
+      );
       setView("login");
-      return;
     }
-
-    setAppUser(data);
-    setView("home");
-  } catch (error) {
-    console.error("checkSession error =", error);
-    setMessage(
-      error instanceof Error
-        ? `セッション確認に失敗しました: ${error.message}`
-        : "セッション確認に失敗しました"
-    );
-    setView("login");
   }
-}
 
   async function handleRegister() {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -361,15 +392,12 @@ export default function HomePage() {
       setPassword("");
 
       await checkSession();
-  } catch (error) {
-  console.error("checkSession error =", error);
-  setMessage(
-    error instanceof Error
-      ? `セッション確認に失敗しました: ${error.message}`
-      : "セッション確認に失敗しました"
-  );
-  setView("login");
-}
+    } catch (error) {
+      console.error(error);
+      setMessage("ログイン中にエラーが発生しました");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleLogout() {
@@ -379,6 +407,7 @@ export default function HomePage() {
     setPeople([]);
     setMatches([]);
     setMessages([]);
+    setReceivedLikes([]);
     setSelectedMatch(null);
     setMessage("");
     setView("login");
@@ -423,10 +452,12 @@ export default function HomePage() {
       const res = await fetch(`/api/matches?currentUserId=${appUser.id}`, {
         cache: "no-store",
       });
-      const data = await res.json();
+
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
 
       if (!res.ok || !Array.isArray(data)) {
-        setMessage("マッチ一覧の取得に失敗しました");
+        setMessage(data?.error ?? "マッチ一覧の取得に失敗しました");
         return;
       }
 
@@ -467,35 +498,40 @@ export default function HomePage() {
   }
 
   async function sendMessage() {
-  if (!appUser || !selectedMatch || !newMessage.trim()) return;
+    if (!appUser || !selectedMatch || !newMessage.trim()) return;
 
-  try {
-    const res = await fetch("/api/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        matchId: selectedMatch.id,
-        senderId: appUser.id,
-        text: newMessage.trim(),
-      }),
-    });
+    try {
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          matchId: selectedMatch.id,
+          senderId: appUser.id,
+          text: newMessage.trim(),
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      setMessage(data.error ?? "送信に失敗しました");
-      return;
+      if (!res.ok) {
+        setMessage(data.error ?? "送信に失敗しました");
+        return;
+      }
+
+      setMessages((prev) => {
+        if (prev.some((msg) => msg.id === data.id)) return prev;
+        return [...prev, data];
+      });
+
+      setNewMessage("");
+    } catch (error) {
+      console.error(error);
+      setMessage("送信中にエラーが発生しました");
     }
-
-    setMessages((prev) => [...prev, data]);
-    setNewMessage("");
-  } catch (error) {
-    console.error(error);
-    setMessage("送信中にエラーが発生しました");
   }
-}
+
   async function handleSwipeApi(target: AppUser, direction: SwipeDirection) {
     if (!appUser) return;
 
@@ -523,6 +559,7 @@ export default function HomePage() {
 
       if (action === "like" && data.matched) {
         alert("マッチしました！");
+        await loadReceivedLikes(appUser.id);
       }
     } catch (error) {
       console.error(error);
@@ -608,44 +645,44 @@ export default function HomePage() {
           }}
         />
 
-      {isRegister && (
-  <input
-    type="file"
-    accept="image/*"
-    onChange={async (e) => {
-      const file = e.target.files?.[0] || null;
+        {isRegister && (
+          <input
+            type="file"
+            accept="image/*"
+            onChange={async (e) => {
+              const file = e.target.files?.[0] || null;
 
-      if (!file) {
-        setImageFile(null);
-        setPreviewUrl("");
-        return;
-      }
+              if (!file) {
+                setImageFile(null);
+                setPreviewUrl("");
+                return;
+              }
 
-      try {
-        const compressedFile = await imageCompression(file, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1200,
-          useWebWorker: true,
-        });
+              try {
+                const compressedFile = await imageCompression(file, {
+                  maxSizeMB: 1,
+                  maxWidthOrHeight: 1200,
+                  useWebWorker: true,
+                });
 
-        setImageFile(compressedFile);
-        setPreviewUrl(URL.createObjectURL(compressedFile));
-      } catch (error) {
-        console.error(error);
-        setMessage("画像の圧縮に失敗しました");
-      }
-    }}
-    style={{
-      width: "100%",
-      padding: 10,
-      borderRadius: 12,
-      border: "1px solid #ccc",
-      fontSize: 16,
-      boxSizing: "border-box",
-      background: "#fff",
-    }}
-  />
-)}
+                setImageFile(compressedFile as File);
+                setPreviewUrl(URL.createObjectURL(compressedFile));
+              } catch (error) {
+                console.error(error);
+                setMessage("画像の圧縮に失敗しました");
+              }
+            }}
+            style={{
+              width: "100%",
+              padding: 10,
+              borderRadius: 12,
+              border: "1px solid #ccc",
+              fontSize: 16,
+              boxSizing: "border-box",
+              background: "#fff",
+            }}
+          />
+        )}
 
         {isRegister && previewUrl && (
           <div style={{ textAlign: "center" }}>
@@ -829,11 +866,31 @@ export default function HomePage() {
                 fontSize: 14,
               }}
             >
-              デモ段階
+              学生が制作したデモ版マッチングサイトです
             </p>
+
+            {receivedLikes.length > 0 && (
+              <div
+                style={{
+                  background: "#fff7ed",
+                  border: "1px solid #fdba74",
+                  color: "#9a3412",
+                  padding: 12,
+                  borderRadius: 14,
+                  marginBottom: 16,
+                  textAlign: "center",
+                  fontWeight: "bold",
+                }}
+              >
+                あなたに {receivedLikes.length} 件のいいねが来ています
+              </div>
+            )}
 
             <p style={{ textAlign: "center", marginBottom: 8 }}>
               ログイン中: {appUser.email}
+            </p>
+            <p style={{ textAlign: "center", marginBottom: 20 }}>
+              ユーザー名: {appUser.name}
             </p>
 
             <div style={{ display: "grid", gap: 12 }}>
@@ -1282,8 +1339,9 @@ export default function HomePage() {
                   );
                 })
               )}
+              <div ref={messagesEndRef} />
             </div>
-            <div ref={messagesEndRef} />
+
             <div
               style={{
                 display: "flex",
