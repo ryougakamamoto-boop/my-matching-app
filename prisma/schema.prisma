@@ -67,14 +67,3 @@ model Message {
   match  Match @relation(fields: [matchId], references: [id])
   sender User  @relation("MessageSender", fields: [senderId], references: [id])
 }
-
-model DatePlanSuggestion {
-  id            String   @id @default(cuid())
-  matchId       String
-  title         String
-  budgetLabel   String
-  durationLabel String
-  summary       String
-  placesJson    String
-  createdAt     DateTime @default(now())
-}
