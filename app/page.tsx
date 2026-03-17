@@ -157,6 +157,7 @@ export default function HomePage() {
   const [selectedMatch, setSelectedMatch] = useState<MatchItem | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [detailPerson, setDetailPerson] = useState<AppUser | null>(null);
 
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -1714,32 +1715,57 @@ export default function HomePage() {
         )}
 
         {view === "swipe" && appUser && (
-          <>
-            <div style={{ marginBottom: 16 }}>
-              <button
-                onClick={() => setView("home")}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  color: "#2563eb",
-                  cursor: "pointer",
-                  fontSize: 16,
-                  padding: 0,
-                }}
+  <>
+    <div style={{ marginBottom: 16 }}>
+      <button
+        onClick={() => setView("home")}
+        style={{
+          border: "none",
+          background: "transparent",
+          color: "#2563eb",
+          cursor: "pointer",
+          fontSize: 16,
+          padding: 0,
+        }}
+      >
+        ← ホームに戻る
+      </button>
+    </div>
+
+    <h2 style={{ textAlign: "center", marginBottom: 12 }}>スワイプ</h2>
+    <p style={{ textAlign: "center", marginBottom: 20 }}>
+      現在のユーザー: <strong>{appUser.name}</strong>
+    </p>
+
+    {people.length === 0 ? (
+      <p style={{ textAlign: "center" }}>表示できるユーザーがいません</p>
+    ) : (
+      <>
+        <div
+          style={{
+            position: "relative",
+            width: "92vw",
+            maxWidth: 380,
+            height: "78vh",
+            minHeight: 560,
+            maxHeight: 680,
+            margin: "0 auto",
+          }}
+        >
+          {people.map((person, index) => {
+            const imageIndex = getImageIndex(person);
+            const hasImages = person.imageUrls && person.imageUrls.length > 0;
+            const currentImageUrl = hasImages
+              ? person.imageUrls[imageIndex]
+              : null;
+
+            return (
+              <TinderCard
+                key={person.id}
+                onSwipe={(dir) => swiped(dir as SwipeDirection, person, index)}
+                onCardLeftScreen={() => {}}
+                preventSwipe={["up", "down"]}
               >
-                ← ホームに戻る
-              </button>
-            </div>
-
-            <h2 style={{ textAlign: "center", marginBottom: 12 }}>スワイプ</h2>
-            <p style={{ textAlign: "center", marginBottom: 20 }}>
-              現在のユーザー: <strong>{appUser.name}</strong>
-            </p>
-
-            {people.length === 0 ? (
-              <p style={{ textAlign: "center" }}>表示できるユーザーがいません</p>
-            ) : (
-              <>
                 <div
                   style={{
                     position: "relative",
@@ -1748,293 +1774,296 @@ export default function HomePage() {
                     height: "78vh",
                     minHeight: 560,
                     maxHeight: 680,
-                    margin: "0 auto",
                   }}
                 >
-                  {people.map((person, index) => {
-                    const imageIndex = getImageIndex(person);
-                    const hasImages =
-                      person.imageUrls && person.imageUrls.length > 0;
-                    const currentImageUrl = hasImages
-                      ? person.imageUrls[imageIndex]
-                      : null;
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "#fff",
+                      borderRadius: 28,
+                      boxShadow: "0 14px 36px rgba(0,0,0,0.16)",
+                      overflow: "hidden",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    {index === currentIndex && overlay && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 18,
+                          left: overlay === "NOPE" ? 18 : "auto",
+                          right: overlay === "LIKE" ? 18 : "auto",
+                          zIndex: 30,
+                          padding: "8px 14px",
+                          border: `4px solid ${
+                            overlay === "LIKE" ? "#22c55e" : "#ef4444"
+                          }`,
+                          color: overlay === "LIKE" ? "#22c55e" : "#ef4444",
+                          fontSize: 24,
+                          fontWeight: "bold",
+                          borderRadius: 12,
+                          transform: "rotate(-12deg)",
+                          background: "rgba(255,255,255,0.82)",
+                        }}
+                      >
+                        {overlay}
+                      </div>
+                    )}
 
-                    return (
-                      <TinderCard
-  key={person.id}
-  onSwipe={(dir) => swiped(dir as SwipeDirection, person, index)}
-  onCardLeftScreen={() => {}}
-  preventSwipe={["up", "down"]}
->
-  <div
-    style={{
-      position: "relative",
-      width: "92vw",
-      maxWidth: 380,
-      height: "78vh",
-      minHeight: 560,
-      maxHeight: 680,
-    }}
-  >
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        background: "#fff",
-        borderRadius: 28,
-        boxShadow: "0 14px 36px rgba(0,0,0,0.16)",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {index === currentIndex && overlay && (
+                    <div
+                      style={{
+                        position: "relative",
+                        height: 300,
+                        background: "#f3f4f6",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        overflow: "hidden",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {hasImages ? (
+                        <>
+                          <img
+                            src={currentImageUrl ?? ""}
+                            alt={person.name}
+                            draggable={false}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "contain",
+                              background: "#f8fafc",
+                            }}
+                          />
+
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              padding: "18px 16px 16px",
+                              background:
+                                "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.38), rgba(0,0,0,0))",
+                              color: "#fff",
+                              zIndex: 12,
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDetailPerson(person);
+                              }}
+                              style={{
+                                border: "none",
+                                background: "transparent",
+                                color: "#fff",
+                                padding: 0,
+                                margin: 0,
+                                fontSize: 30,
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                textAlign: "left",
+                              }}
+                            >
+                              {person.name}
+                            </button>
+
+                            <p
+                              style={{
+                                margin: "8px 0 0",
+                                fontSize: 15,
+                                lineHeight: 1.5,
+                                color: "rgba(255,255,255,0.95)",
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {person.bio?.trim()
+                                ? person.bio.length > 28
+                                  ? `${person.bio.slice(0, 28)}...`
+                                  : person.bio
+                                : "名前をタップして詳しい自己紹介を見る"}
+                            </p>
+                          </div>
+
+                          {person.imageUrls.length > 1 && (
+                            <>
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: 10,
+                                  left: 10,
+                                  right: 10,
+                                  zIndex: 15,
+                                  display: "flex",
+                                  gap: 6,
+                                }}
+                              >
+                                {person.imageUrls.map((_, barIndex) => (
+                                  <div
+                                    key={barIndex}
+                                    style={{
+                                      flex: 1,
+                                      height: 4,
+                                      borderRadius: 999,
+                                      background:
+                                        barIndex === imageIndex
+                                          ? "rgba(255,255,255,0.98)"
+                                          : "rgba(255,255,255,0.38)",
+                                    }}
+                                  />
+                                ))}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  prevImage(person);
+                                }}
+                                onTouchStart={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  prevImage(person);
+                                }}
+                                style={{
+                                  position: "absolute",
+                                  top: 0,
+                                  left: 0,
+                                  width: "50%",
+                                  height: "100%",
+                                  border: "none",
+                                  background: "transparent",
+                                  zIndex: 20,
+                                  cursor: "pointer",
+                                }}
+                                aria-label="前の画像"
+                              />
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  nextImage(person);
+                                }}
+                                onTouchStart={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  nextImage(person);
+                                }}
+                                style={{
+                                  position: "absolute",
+                                  top: 0,
+                                  right: 0,
+                                  width: "50%",
+                                  height: "100%",
+                                  border: "none",
+                                  background: "transparent",
+                                  zIndex: 20,
+                                  cursor: "pointer",
+                                }}
+                                aria-label="次の画像"
+                              />
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 64, color: "#9ca3af" }}>👤</div>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        padding: 16,
+                        background: "#fff",
+                        borderTop: "1px solid #f3f4f6",
+                      }}
+                    >
+                      <p
+                        style={{
+                          margin: 0,
+                          color: "#6b7280",
+                          fontSize: 14,
+                          textAlign: "center",
+                        }}
+                      >
+                        名前をタップすると詳しいプロフィールを表示
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </TinderCard>
+            );
+          })}
+        </div>
+
         <div
           style={{
-            position: "absolute",
-            top: 18,
-            left: overlay === "NOPE" ? 18 : "auto",
-            right: overlay === "LIKE" ? 18 : "auto",
-            zIndex: 30,
-            padding: "8px 14px",
-            border: `4px solid ${overlay === "LIKE" ? "#22c55e" : "#ef4444"}`,
-            color: overlay === "LIKE" ? "#22c55e" : "#ef4444",
-            fontSize: 24,
-            fontWeight: "bold",
-            borderRadius: 12,
-            transform: "rotate(-12deg)",
-            background: "rgba(255,255,255,0.82)",
+            display: "flex",
+            justifyContent: "center",
+            gap: 12,
+            marginTop: 20,
+            flexWrap: "wrap",
           }}
         >
-          {overlay}
+          <button
+            onClick={() => swipeManually("left")}
+            style={{
+              minWidth: 120,
+              padding: "14px 20px",
+              borderRadius: 999,
+              border: "none",
+              background: "#9ca3af",
+              color: "#fff",
+              fontSize: 16,
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            Skip
+          </button>
+
+          <button
+            onClick={() => swipeManually("right")}
+            style={{
+              minWidth: 120,
+              padding: "14px 20px",
+              borderRadius: 999,
+              border: "none",
+              background: "#ef4444",
+              color: "#fff",
+              fontSize: 16,
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            Like
+          </button>
         </div>
-      )}
 
-      <div
-        style={{
-          position: "relative",
-          height: 280,
-          background: "#f3f4f6",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-          flexShrink: 0,
-        }}
-      >
-        {hasImages ? (
-          <>
-            <img
-              src={currentImageUrl ?? ""}
-              alt={person.name}
-              draggable={false}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                background: "#f8fafc",
-              }}
-            />
-
-            {person.imageUrls.length > 1 && (
-              <>
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 10,
-                    left: 10,
-                    right: 10,
-                    zIndex: 15,
-                    display: "flex",
-                    gap: 6,
-                  }}
-                >
-                  {person.imageUrls.map((_, barIndex) => (
-                    <div
-                      key={barIndex}
-                      style={{
-                        flex: 1,
-                        height: 4,
-                        borderRadius: 999,
-                        background:
-                          barIndex === imageIndex
-                            ? "rgba(255,255,255,0.98)"
-                            : "rgba(255,255,255,0.38)",
-                      }}
-                    />
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    prevImage(person);
-                  }}
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    prevImage(person);
-                  }}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "50%",
-                    height: "100%",
-                    border: "none",
-                    background: "transparent",
-                    zIndex: 20,
-                  }}
-                  aria-label="前の画像"
-                />
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    nextImage(person);
-                  }}
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    nextImage(person);
-                  }}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    right: 0,
-                    width: "50%",
-                    height: "100%",
-                    border: "none",
-                    background: "transparent",
-                    zIndex: 20,
-                  }}
-                  aria-label="次の画像"
-                />
-              </>
-            )}
-          </>
-        ) : (
-          <div style={{ fontSize: 64, color: "#9ca3af" }}>👤</div>
+        {lastDirection && people.length > 0 && (
+          <p
+            style={{
+              marginTop: 16,
+              textAlign: "center",
+              fontSize: 18,
+              fontWeight: "bold",
+              color: lastDirection === "LIKE" ? "#22c55e" : "#ef4444",
+            }}
+          >
+            {lastDirection}
+          </p>
         )}
-      </div>
-
-      <div
-        style={{
-          padding: 20,
-          overflowY: "auto",
-          flex: 1,
-        }}
-      >
-        <h3
-          style={{
-            margin: "0 0 12px",
-            fontSize: 28,
-            fontWeight: 800,
-          }}
-        >
-          {person.name}
-        </h3>
-
-        <p style={{ margin: "0 0 12px", color: "#555" }}>
-          {person.bio || "自己紹介はまだありません"}
-        </p>
-
-        <p style={{ margin: "0 0 8px", color: "red", fontSize: 12 }}>
-          画像枚数: {person.imageUrls?.length ?? 0}
-        </p>
-
-        <p
-          style={{
-            margin: "0 0 8px",
-            color: "red",
-            fontSize: 12,
-            wordBreak: "break-all",
-          }}
-        >
-          1枚目URL: {person.imageUrls?.[0] || "なし"}
-        </p>
-
-        {person.height ? <p>身長: {person.height}cm</p> : null}
-        {person.weight ? <p>体重: {person.weight}kg</p> : null}
-        {person.hobbies ? <p>趣味: {person.hobbies}</p> : null}
-        {person.occupation ? <p>職業: {person.occupation}</p> : null}
-        {person.livingArea ? <p>住んでいる地域: {person.livingArea}</p> : null}
-        {person.meetingArea ? <p>会える地域: {person.meetingArea}</p> : null}
-      </div>
-    </div>
-  </div>
-</TinderCard>
-                    );
-                  })}
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: 12,
-                    marginTop: 20,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <button
-                    onClick={() => swipeManually("left")}
-                    style={{
-                      minWidth: 120,
-                      padding: "14px 20px",
-                      borderRadius: 999,
-                      border: "none",
-                      background: "#9ca3af",
-                      color: "#fff",
-                      fontSize: 16,
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Skip
-                  </button>
-
-                  <button
-                    onClick={() => swipeManually("right")}
-                    style={{
-                      minWidth: 120,
-                      padding: "14px 20px",
-                      borderRadius: 999,
-                      border: "none",
-                      background: "#ef4444",
-                      color: "#fff",
-                      fontSize: 16,
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Like
-                  </button>
-                </div>
-
-                {lastDirection && people.length > 0 && (
-                  <p
-                    style={{
-                      marginTop: 16,
-                      textAlign: "center",
-                      fontSize: 18,
-                      fontWeight: "bold",
-                      color:
-                        lastDirection === "LIKE" ? "#22c55e" : "#ef4444",
-                    }}
-                  >
-                    {lastDirection}
-                  </p>
-                )}
-              </>
-            )}
-          </>
-        )}
-
+      </>
+    )}
+  </>
+)}
         {view === "matches" && appUser && (
           <>
             <div style={{ marginBottom: 16 }}>
@@ -2264,6 +2293,145 @@ export default function HomePage() {
             </div>
           </>
         )}
+
+        {detailPerson && (
+  <div
+    onClick={() => setDetailPerson(null)}
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.55)",
+      zIndex: 9999,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+      boxSizing: "border-box",
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        width: "100%",
+        maxWidth: 420,
+        maxHeight: "85vh",
+        overflowY: "auto",
+        background: "#fff",
+        borderRadius: 24,
+        boxShadow: "0 20px 50px rgba(0,0,0,0.22)",
+        overflowX: "hidden",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          height: 320,
+          background: "#f3f4f6",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {detailPerson.imageUrls && detailPerson.imageUrls.length > 0 ? (
+          <img
+            src={detailPerson.imageUrls[0]}
+            alt={detailPerson.name}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              background: "#f8fafc",
+            }}
+          />
+        ) : (
+          <div style={{ fontSize: 64, color: "#9ca3af" }}>👤</div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setDetailPerson(null)}
+          style={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            border: "none",
+            background: "rgba(255,255,255,0.9)",
+            cursor: "pointer",
+            fontSize: 20,
+            fontWeight: "bold",
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      <div style={{ padding: 20 }}>
+        <h2
+          style={{
+            margin: "0 0 14px",
+            fontSize: 28,
+            fontWeight: 800,
+            color: "#111827",
+          }}
+        >
+          {detailPerson.name}
+        </h2>
+
+        <div
+          style={{
+            display: "grid",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              padding: 14,
+              borderRadius: 16,
+              background: "#f8fafc",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: "#374151",
+                lineHeight: 1.7,
+                wordBreak: "break-word",
+              }}
+            >
+              {detailPerson.bio || "自己紹介はまだありません"}
+            </p>
+          </div>
+
+          {detailPerson.height ? (
+            <p style={{ margin: 0 }}>身長: {detailPerson.height}cm</p>
+          ) : null}
+          {detailPerson.weight ? (
+            <p style={{ margin: 0 }}>体重: {detailPerson.weight}kg</p>
+          ) : null}
+          {detailPerson.hobbies ? (
+            <p style={{ margin: 0 }}>趣味: {detailPerson.hobbies}</p>
+          ) : null}
+          {detailPerson.occupation ? (
+            <p style={{ margin: 0 }}>職業: {detailPerson.occupation}</p>
+          ) : null}
+          {detailPerson.livingArea ? (
+            <p style={{ margin: 0 }}>
+              住んでいる地域: {detailPerson.livingArea}
+            </p>
+          ) : null}
+          {detailPerson.meetingArea ? (
+            <p style={{ margin: 0 }}>
+              会える地域: {detailPerson.meetingArea}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
         {message && (
           <p style={{ marginTop: 20, textAlign: "center" }}>{message}</p>
