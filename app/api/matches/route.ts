@@ -43,16 +43,18 @@ export async function GET(req: Request) {
       },
     });
 
-    const result = matches.map((match) => {
-      const partner =
-        match.user1Id === currentUserId ? match.user2 : match.user1;
+    type MatchItem = (typeof matches)[number];
 
-      return {
-        id: match.id,
-        createdAt: match.createdAt,
-        partner,
-      };
-    });
+const result = matches.map((match: MatchItem) => {
+  const partner =
+    match.user1Id === currentUserId ? match.user2 : match.user1;
+
+  return {
+    id: match.id,
+    createdAt: match.createdAt,
+    partner,
+  };
+});
 
     return NextResponse.json(result);
   } catch (error) {

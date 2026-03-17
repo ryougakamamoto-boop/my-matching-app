@@ -1872,6 +1872,7 @@ export default function HomePage() {
                               alignItems: "center",
                               justifyContent: "center",
                               overflow: "hidden",
+                              touchAction: "manipulation",
                             }}
                           >
                             {hasImages ? (
@@ -1917,9 +1918,15 @@ export default function HomePage() {
                                       ))}
                                     </div>
 
-                                    <button
+                                <button
                                       type="button"
                                       onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        prevImage(person);
+                                      }}
+                                      onTouchStart={(e) => {
+                                        e.preventDefault();
                                         e.stopPropagation();
                                         prevImage(person);
                                       }}
@@ -1932,7 +1939,8 @@ export default function HomePage() {
                                         border: "none",
                                         background: "transparent",
                                         cursor: "pointer",
-                                        zIndex: 7,
+                                        zIndex: 20,
+                                        touchAction: "manipulation",
                                       }}
                                       aria-label="前の画像"
                                     />
@@ -1940,6 +1948,12 @@ export default function HomePage() {
                                     <button
                                       type="button"
                                       onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        nextImage(person);
+                                      }}
+                                      onTouchStart={(e) => {
+                                        e.preventDefault();
                                         e.stopPropagation();
                                         nextImage(person);
                                       }}
@@ -1952,10 +1966,11 @@ export default function HomePage() {
                                         border: "none",
                                         background: "transparent",
                                         cursor: "pointer",
-                                        zIndex: 7,
+                                        zIndex: 20,
+                                        touchAction: "manipulation",
                                       }}
                                       aria-label="次の画像"
-                                    />
+                                    />   
                                   </>
                                 )}
                               </>
