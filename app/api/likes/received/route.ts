@@ -17,22 +17,37 @@ export async function GET(req: Request) {
       where: {
         toUserId: currentUserId,
       },
+      orderBy: {
+        createdAt: "desc",
+      },
       include: {
         fromUser: {
           select: {
             id: true,
             name: true,
             bio: true,
-            imageUrl: true,
+            imageUrls: true,
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
     });
 
-    return NextResponse.json(likes);
+    type ReceivedLike = (typeof likes)[number];
+
+    const result = likes.map((like: ReceivedLike) => {
+      return {
+        id: like.id,
+        createdAt: like.createdAt,
+        fromUser: {
+          id: like.fromUser.id,
+          name: like.fromUser.name,
+          bio: like.fromUser.bio,
+          imageUrls: like.fromUser.imageUrls ?? [],
+        },
+      };
+    });
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("GET /api/likes/received error:", error);
     return NextResponse.json(
