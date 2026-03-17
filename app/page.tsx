@@ -1791,16 +1791,16 @@ export default function HomePage() {
             ) : (
               <>
                 <div
-                    style={{
-                      position: "relative",
-                      width: "92vw",
-                      maxWidth: 380,
-                      height: "72vh",
-                      minHeight: 520,
-                      maxHeight: 640,
-                      margin: "0 auto",
-                    }}
-                  ></div>
+                  style={{
+                    position: "relative",
+                    width: "92vw",
+                    maxWidth: 380,
+                    height: "78vh",
+                    minHeight: 560,
+                    maxHeight: 680,
+                    margin: "0 auto",
+                  }}
+                ></div>
                   {people.map((person, index) => {
   const imageIndex = getImageIndex(person);
   const hasImages = person.imageUrls && person.imageUrls.length > 0;
@@ -1816,15 +1816,12 @@ export default function HomePage() {
       preventSwipe={["up", "down"]}
     >
       <div
-        style={{
+      style={{
           position: "absolute",
           top: 0,
           left: 0,
-          width: "92vw",
-          maxWidth: 380,
-          height: "72vh",
-          minHeight: 520,
-          maxHeight: 640,
+          width: "100%",
+          height: "100%",
           background: "#fff",
           borderRadius: 28,
           boxShadow: "0 14px 36px rgba(0,0,0,0.16)",
@@ -1863,8 +1860,9 @@ export default function HomePage() {
         <div
           style={{
             position: "relative",
-            height: "52%",
-            minHeight: 280,
+            height: "44%",
+            minHeight: 220,
+            maxHeight: 300,
             flexShrink: 0,
             background: "#f3f4f6",
             display: "flex",
@@ -1992,19 +1990,18 @@ export default function HomePage() {
         </div>
 
         <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: "auto",
-            WebkitOverflowScrolling: "touch",
-            padding: 18,
-            background: "#fff",
-          }}
-        >
+  style={{
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
+    padding: "16px 18px 18px",
+    background: "#fff",
+  }}
+>
           <div
             style={{
-              position: "sticky",
-              top: 0,
+              
               background: "rgba(255,255,255,0.95)",
               backdropFilter: "blur(6px)",
               paddingBottom: 12,
