@@ -1761,223 +1761,213 @@ export default function HomePage() {
 
                     return (
                       <TinderCard
-                        key={person.id}
-                        onSwipe={(dir) =>
-                          swiped(dir as SwipeDirection, person, index)
-                        }
-                        onCardLeftScreen={() => {}}
-                        preventSwipe={["up", "down"]}
-                      >
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            width: "100%",
-                            height: "100%",
-                            background: "#fff",
-                            borderRadius: 28,
-                            boxShadow: "0 14px 36px rgba(0,0,0,0.16)",
-                            overflow: "hidden",
-                            display: "flex",
-                            flexDirection: "column",
-                          }}
-                        >
-                          {index === currentIndex && overlay && (
-                            <div
-                              style={{
-                                position: "absolute",
-                                top: 18,
-                                left: overlay === "NOPE" ? 18 : "auto",
-                                right: overlay === "LIKE" ? 18 : "auto",
-                                zIndex: 30,
-                                padding: "8px 14px",
-                                border: `4px solid ${
-                                  overlay === "LIKE" ? "#22c55e" : "#ef4444"
-                                }`,
-                                color:
-                                  overlay === "LIKE" ? "#22c55e" : "#ef4444",
-                                fontSize: 24,
-                                fontWeight: "bold",
-                                borderRadius: 12,
-                                transform: "rotate(-12deg)",
-                                background: "rgba(255,255,255,0.82)",
-                              }}
-                            >
-                              {overlay}
-                            </div>
-                          )}
+  key={person.id}
+  onSwipe={(dir) => swiped(dir as SwipeDirection, person, index)}
+  onCardLeftScreen={() => {}}
+  preventSwipe={["up", "down"]}
+>
+  <div
+    style={{
+      position: "relative",
+      width: "92vw",
+      maxWidth: 380,
+      height: "78vh",
+      minHeight: 560,
+      maxHeight: 680,
+    }}
+  >
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: "#fff",
+        borderRadius: 28,
+        boxShadow: "0 14px 36px rgba(0,0,0,0.16)",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {index === currentIndex && overlay && (
+        <div
+          style={{
+            position: "absolute",
+            top: 18,
+            left: overlay === "NOPE" ? 18 : "auto",
+            right: overlay === "LIKE" ? 18 : "auto",
+            zIndex: 30,
+            padding: "8px 14px",
+            border: `4px solid ${overlay === "LIKE" ? "#22c55e" : "#ef4444"}`,
+            color: overlay === "LIKE" ? "#22c55e" : "#ef4444",
+            fontSize: 24,
+            fontWeight: "bold",
+            borderRadius: 12,
+            transform: "rotate(-12deg)",
+            background: "rgba(255,255,255,0.82)",
+          }}
+        >
+          {overlay}
+        </div>
+      )}
 
-                          <div
-                            style={{
-                              position: "relative",
-                              height: 280,
-                              background: "#f3f4f6",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              overflow: "hidden",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {hasImages ? (
-                              <>
-                                <img
-                                  src={currentImageUrl ?? ""}
-                                  alt={person.name}
-                                  draggable={false}
-                                  style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit: "contain",
-                                    background: "#f8fafc",
-                                  }}
-                                />
+      <div
+        style={{
+          position: "relative",
+          height: 280,
+          background: "#f3f4f6",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          flexShrink: 0,
+        }}
+      >
+        {hasImages ? (
+          <>
+            <img
+              src={currentImageUrl ?? ""}
+              alt={person.name}
+              draggable={false}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                background: "#f8fafc",
+              }}
+            />
 
-                                {person.imageUrls.length > 1 && (
-                                  <>
-                                    <div
-                                      style={{
-                                        position: "absolute",
-                                        top: 10,
-                                        left: 10,
-                                        right: 10,
-                                        zIndex: 15,
-                                        display: "flex",
-                                        gap: 6,
-                                      }}
-                                    >
-                                      {person.imageUrls.map((_, barIndex) => (
-                                        <div
-                                          key={barIndex}
-                                          style={{
-                                            flex: 1,
-                                            height: 4,
-                                            borderRadius: 999,
-                                            background:
-                                              barIndex === imageIndex
-                                                ? "rgba(255,255,255,0.98)"
-                                                : "rgba(255,255,255,0.38)",
-                                          }}
-                                        />
-                                      ))}
-                                    </div>
+            {person.imageUrls.length > 1 && (
+              <>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 10,
+                    left: 10,
+                    right: 10,
+                    zIndex: 15,
+                    display: "flex",
+                    gap: 6,
+                  }}
+                >
+                  {person.imageUrls.map((_, barIndex) => (
+                    <div
+                      key={barIndex}
+                      style={{
+                        flex: 1,
+                        height: 4,
+                        borderRadius: 999,
+                        background:
+                          barIndex === imageIndex
+                            ? "rgba(255,255,255,0.98)"
+                            : "rgba(255,255,255,0.38)",
+                      }}
+                    />
+                  ))}
+                </div>
 
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        prevImage(person);
-                                      }}
-                                      onTouchStart={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        prevImage(person);
-                                      }}
-                                      style={{
-                                        position: "absolute",
-                                        top: 0,
-                                        left: 0,
-                                        width: "50%",
-                                        height: "100%",
-                                        border: "none",
-                                        background: "transparent",
-                                        zIndex: 20,
-                                      }}
-                                      aria-label="前の画像"
-                                    />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    prevImage(person);
+                  }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    prevImage(person);
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "50%",
+                    height: "100%",
+                    border: "none",
+                    background: "transparent",
+                    zIndex: 20,
+                  }}
+                  aria-label="前の画像"
+                />
 
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        nextImage(person);
-                                      }}
-                                      onTouchStart={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        nextImage(person);
-                                      }}
-                                      style={{
-                                        position: "absolute",
-                                        top: 0,
-                                        right: 0,
-                                        width: "50%",
-                                        height: "100%",
-                                        border: "none",
-                                        background: "transparent",
-                                        zIndex: 20,
-                                      }}
-                                      aria-label="次の画像"
-                                    />
-                                  </>
-                                )}
-                              </>
-                            ) : (
-                              <div style={{ fontSize: 64, color: "#9ca3af" }}>
-                                👤
-                              </div>
-                            )}
-                          </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    nextImage(person);
+                  }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    nextImage(person);
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    right: 0,
+                    width: "50%",
+                    height: "100%",
+                    border: "none",
+                    background: "transparent",
+                    zIndex: 20,
+                  }}
+                  aria-label="次の画像"
+                />
+              </>
+            )}
+          </>
+        ) : (
+          <div style={{ fontSize: 64, color: "#9ca3af" }}>👤</div>
+        )}
+      </div>
 
-                          <div
-                            style={{
-                              padding: 20,
-                              overflowY: "auto",
-                              flex: 1,
-                            }}
-                          >
-                            <h3
-                              style={{
-                                margin: "0 0 12px",
-                                fontSize: 28,
-                                fontWeight: 800,
-                              }}
-                            >
-                              {person.name}
-                            </h3>
+      <div
+        style={{
+          padding: 20,
+          overflowY: "auto",
+          flex: 1,
+        }}
+      >
+        <h3
+          style={{
+            margin: "0 0 12px",
+            fontSize: 28,
+            fontWeight: 800,
+          }}
+        >
+          {person.name}
+        </h3>
 
-                            <p
-                                style={{
-                                  margin: "0 0 12px",
-                                  color: "#555",
-                                }}
-                              >
-                                {person.bio || "自己紹介はまだありません"}
-                              </p>
+        <p style={{ margin: "0 0 12px", color: "#555" }}>
+          {person.bio || "自己紹介はまだありません"}
+        </p>
 
-                              <p style={{ margin: "0 0 8px", color: "red", fontSize: 12 }}>
-                                画像枚数: {person.imageUrls?.length ?? 0}
-                              </p>
+        <p style={{ margin: "0 0 8px", color: "red", fontSize: 12 }}>
+          画像枚数: {person.imageUrls?.length ?? 0}
+        </p>
 
-                              <p
-                                style={{
-                                  margin: "0 0 8px",
-                                  color: "red",
-                                  fontSize: 12,
-                                  wordBreak: "break-all",
-                                }}
-                              >
-                                1枚目URL: {person.imageUrls?.[0] || "なし"}
-                            </p>
+        <p
+          style={{
+            margin: "0 0 8px",
+            color: "red",
+            fontSize: 12,
+            wordBreak: "break-all",
+          }}
+        >
+          1枚目URL: {person.imageUrls?.[0] || "なし"}
+        </p>
 
-                            {person.height ? <p>身長: {person.height}cm</p> : null}
-                            {person.weight ? <p>体重: {person.weight}kg</p> : null}
-                            {person.hobbies ? <p>趣味: {person.hobbies}</p> : null}
-                            {person.occupation ? (
-                              <p>職業: {person.occupation}</p>
-                            ) : null}
-                            {person.livingArea ? (
-                              <p>住んでいる地域: {person.livingArea}</p>
-                            ) : null}
-                            {person.meetingArea ? (
-                              <p>会える地域: {person.meetingArea}</p>
-                            ) : null}
-                          </div>
-                        </div>
-                      </TinderCard>
+        {person.height ? <p>身長: {person.height}cm</p> : null}
+        {person.weight ? <p>体重: {person.weight}kg</p> : null}
+        {person.hobbies ? <p>趣味: {person.hobbies}</p> : null}
+        {person.occupation ? <p>職業: {person.occupation}</p> : null}
+        {person.livingArea ? <p>住んでいる地域: {person.livingArea}</p> : null}
+        {person.meetingArea ? <p>会える地域: {person.meetingArea}</p> : null}
+      </div>
+    </div>
+  </div>
+</TinderCard>
                     );
                   })}
                 </div>
