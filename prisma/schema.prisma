@@ -21,13 +21,13 @@ model User {
   livingArea     String?
   meetingArea    String?
   bio            String?
-  imageUrls String[]
+  imageUrls      String[]
   createdAt      DateTime @default(now())
 
   sentLikes      Like[]    @relation("sentLikes")
   receivedLikes  Like[]    @relation("receivedLikes")
-  matchesAsUser1 Match[]   @relation("matchUser1")
-  matchesAsUser2 Match[]   @relation("matchUser2")
+  matchesAsUser1 Match[]   @relation("MatchUser1")
+  matchesAsUser2 Match[]   @relation("MatchUser2")
   messages       Message[] @relation("MessageSender")
 }
 
@@ -37,37 +37,24 @@ model Like {
   toUserId   String
   createdAt  DateTime @default(now())
 
-  fromUser User @relation("sentLikes", fields: [fromUserId], references: [id], onDelete: Cascade)
-  toUser   User @relation("receivedLikes", fields: [toUserId], references: [id], onDelete: Cascade)
-
-  @@unique([fromUserId, toUserId])
+  fromUser User @relation("sentLikes", fields: [fromUserId], references: [id])
+  toUser   User @relation("receivedLikes", fields: [toUserId], references: [id])
 }
 
 model Match {
-  id             String   @id @default(cuid())
-  user1Id        String
-  user2Id        String
-  createdAt      DateTime @default(now())
+  id        String   @id @default(cuid())
+  user1Id   String
+  user2Id   String
+  createdAt DateTime @default(now())
 
-  user1WantsMeet Boolean  @default(false)
-  user2WantsMeet Boolean  @default(false)
+  user1WantsMeet Boolean   @default(false)
+  user2WantsMeet Boolean   @default(false)
   meetMatchedAt  DateTime?
 
-  user1          User     @relation("MatchUser1", fields: [user1Id], references: [id])
-  user2          User     @relation("MatchUser2", fields: [user2Id], references: [id])
+  user1 User @relation("MatchUser1", fields: [user1Id], references: [id])
+  user2 User @relation("MatchUser2", fields: [user2Id], references: [id])
 
-  messages       Message[]
-}
-
-model DatePlanSuggestion {
-  id          String   @id @default(cuid())
-  matchId      String
-  title        String
-  budgetLabel  String
-  durationLabel String
-  summary      String
-  placesJson   String
-  createdAt    DateTime @default(now())
+  messages Message[]
 }
 
 model Message {
@@ -77,6 +64,17 @@ model Message {
   text      String
   createdAt DateTime @default(now())
 
-  match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  sender User  @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  match  Match @relation(fields: [matchId], references: [id])
+  sender User  @relation("MessageSender", fields: [senderId], references: [id])
+}
+
+model DatePlanSuggestion {
+  id            String   @id @default(cuid())
+  matchId       String
+  title         String
+  budgetLabel   String
+  durationLabel String
+  summary       String
+  placesJson    String
+  createdAt     DateTime @default(now())
 }
