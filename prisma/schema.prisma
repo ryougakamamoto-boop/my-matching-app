@@ -44,16 +44,30 @@ model Like {
 }
 
 model Match {
-  id        String   @id @default(cuid())
-  user1Id   String
-  user2Id   String
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  user1Id        String
+  user2Id        String
+  createdAt      DateTime @default(now())
 
-  user1    User      @relation("matchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
-  user2    User      @relation("matchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
-  messages Message[]
+  user1WantsMeet Boolean  @default(false)
+  user2WantsMeet Boolean  @default(false)
+  meetMatchedAt  DateTime?
 
-  @@unique([user1Id, user2Id])
+  user1          User     @relation("MatchUser1", fields: [user1Id], references: [id])
+  user2          User     @relation("MatchUser2", fields: [user2Id], references: [id])
+
+  messages       Message[]
+}
+
+model DatePlanSuggestion {
+  id          String   @id @default(cuid())
+  matchId      String
+  title        String
+  budgetLabel  String
+  durationLabel String
+  summary      String
+  placesJson   String
+  createdAt    DateTime @default(now())
 }
 
 model Message {

@@ -168,7 +168,30 @@ export default function HomePage() {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const currentIndex = people.length - 1;
-
+  const [dateIntentLoading, setDateIntentLoading] = useState(false);
+const [datePlanLoading, setDatePlanLoading] = useState(false);
+const [bothWantToMeet, setBothWantToMeet] = useState(false);
+const [dateBudget, setDateBudget] = useState<"low" | "medium" | "high">("low");
+const [dateDuration, setDateDuration] = useState<"short" | "medium" | "long">("short");
+const [dateMood, setDateMood] = useState<"quiet" | "lively">("quiet");
+const [dateTimeOfDay, setDateTimeOfDay] = useState<"day" | "night">("day");
+const [datePlans, setDatePlans] = useState<
+  {
+    title: string;
+    summary: string;
+    budgetLabel: string;
+    durationLabel: string;
+    area: string;
+    shops: {
+      name: string;
+      address: string;
+      catchCopy: string;
+      budgetText: string;
+      imageUrl: string;
+      sourceUrl: string;
+    }[];
+  }[]
+>([]);
   useEffect(() => {
     checkSession();
   }, []);
@@ -256,6 +279,84 @@ export default function HomePage() {
       };
     });
   }
+
+  async function sendDateIntent() {
+  if (!appUser || !selectedMatch) return;
+
+  try {
+    setDateIntentLoading(true);
+    setMessage("");
+
+    const res = await fetch("/api/date-intent", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        matchId: selectedMatch.id,
+        userId: appUser.id,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(data.error ?? "会いたい意思の送信に失敗しました");
+      return;
+    }
+
+    if (data.bothReady) {
+      setBothWantToMeet(true);
+      setMessage("お互いが会いたい状態になりました。条件を選んでプランを作れます。");
+    } else {
+      setMessage("会いたい意思を送信しました。相手の返答を待ちましょう。");
+    }
+  } catch (error) {
+    console.error(error);
+    setMessage("会いたい意思の送信中にエラーが発生しました");
+  } finally {
+    setDateIntentLoading(false);
+  }
+}
+
+async function generateDatePlans() {
+  if (!appUser || !selectedMatch) return;
+
+  try {
+    setDatePlanLoading(true);
+    setMessage("");
+    setDatePlans([]);
+
+    const res = await fetch("/api/date-plans/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        matchId: selectedMatch.id,
+        userId: appUser.id,
+        budget: dateBudget,
+        duration: dateDuration,
+        mood: dateMood,
+        timeOfDay: dateTimeOfDay,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(data.error ?? "デートプラン生成に失敗しました");
+      return;
+    }
+
+    setDatePlans(data.plans ?? []);
+  } catch (error) {
+    console.error(error);
+    setMessage("デートプラン生成中にエラーが発生しました");
+  } finally {
+    setDatePlanLoading(false);
+  }
+}
 
   async function loadReceivedLikes(userId: string) {
     try {
@@ -719,6 +820,9 @@ export default function HomePage() {
       setLoading(true);
       setMessage("");
       setSelectedMatch(match);
+
+      setDatePlans([]);
+      setBothWantToMeet(false);
 
       const res = await fetch(`/api/messages?matchId=${match.id}`, {
         cache: "no-store",
@@ -2269,7 +2373,188 @@ export default function HomePage() {
               )}
               <div ref={messagesEndRef} />
             </div>
+              <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
+  <button
+    onClick={sendDateIntent}
+    disabled={dateIntentLoading}
+    style={{
+      padding: "12px 18px",
+      borderRadius: 999,
+      border: "none",
+      background: "#f59e0b",
+      color: "#fff",
+      fontWeight: "bold",
+      fontSize: 16,
+      cursor: "pointer",
+    }}
+  >
+    {dateIntentLoading ? "送信中..." : "会ってみたい"}
+  </button>
 
+  {bothWantToMeet && (
+    <>
+      <div
+        style={{
+          background: "#fff7ed",
+          border: "1px solid #fdba74",
+          color: "#9a3412",
+          padding: 12,
+          borderRadius: 14,
+          textAlign: "center",
+          fontWeight: "bold",
+        }}
+      >
+        お互いに会ってみたい状態になりました
+      </div>
+
+      <div style={{ display: "grid", gap: 10 }}>
+        <select
+          value={dateBudget}
+          onChange={(e) =>
+            setDateBudget(e.target.value as "low" | "medium" | "high")
+          }
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #ccc" }}
+        >
+          <option value="low">低予算</option>
+          <option value="medium">中予算</option>
+          <option value="high">高予算</option>
+        </select>
+
+        <select
+          value={dateDuration}
+          onChange={(e) =>
+            setDateDuration(e.target.value as "short" | "medium" | "long")
+          }
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #ccc" }}
+        >
+          <option value="short">1〜2時間</option>
+          <option value="medium">2〜3時間</option>
+          <option value="long">3〜4時間</option>
+        </select>
+
+        <select
+          value={dateMood}
+          onChange={(e) =>
+            setDateMood(e.target.value as "quiet" | "lively")
+          }
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #ccc" }}
+        >
+          <option value="quiet">静かめ</option>
+          <option value="lively">にぎやか</option>
+        </select>
+
+        <select
+          value={dateTimeOfDay}
+          onChange={(e) =>
+            setDateTimeOfDay(e.target.value as "day" | "night")
+          }
+          style={{ padding: 12, borderRadius: 12, border: "1px solid #ccc" }}
+        >
+          <option value="day">昼</option>
+          <option value="night">夜</option>
+        </select>
+
+        <button
+          onClick={generateDatePlans}
+          disabled={datePlanLoading}
+          style={{
+            padding: "12px 18px",
+            borderRadius: 999,
+            border: "none",
+            background: "#2563eb",
+            color: "#fff",
+            fontWeight: "bold",
+            fontSize: 16,
+            cursor: "pointer",
+          }}
+        >
+          {datePlanLoading ? "提案中..." : "AIにデートプランを提案してもらう"}
+        </button>
+      </div>
+    </>
+  )}
+
+  {datePlans.length > 0 && (
+    <div style={{ display: "grid", gap: 14 }}>
+      <h3 style={{ margin: 0 }}>おすすめデートプラン</h3>
+
+      {datePlans.map((plan, index) => (
+        <div
+          key={index}
+          style={{
+            background: "#f9fafb",
+            borderRadius: 16,
+            padding: 14,
+            border: "1px solid #e5e7eb",
+            display: "grid",
+            gap: 12,
+          }}
+        >
+          <div>
+            <h4 style={{ margin: "0 0 8px" }}>{plan.title}</h4>
+            <p style={{ margin: "0 0 6px" }}>場所: {plan.area}</p>
+            <p style={{ margin: "0 0 6px" }}>予算: {plan.budgetLabel}</p>
+            <p style={{ margin: "0 0 6px" }}>所要時間: {plan.durationLabel}</p>
+            <p style={{ margin: 0, color: "#555", lineHeight: 1.6 }}>
+              {plan.summary}
+            </p>
+          </div>
+
+          <div style={{ display: "grid", gap: 10 }}>
+            {plan.shops.map((shop, shopIndex) => (
+              <div
+                key={shopIndex}
+                style={{
+                  background: "#fff",
+                  borderRadius: 14,
+                  padding: 12,
+                  border: "1px solid #e5e7eb",
+                  display: "grid",
+                  gap: 8,
+                }}
+              >
+                <strong>{shop.name}</strong>
+                <p style={{ margin: 0, color: "#555" }}>{shop.address}</p>
+                {shop.catchCopy ? (
+                  <p style={{ margin: 0, color: "#555" }}>{shop.catchCopy}</p>
+                ) : null}
+                {shop.budgetText ? (
+                  <p style={{ margin: 0, color: "#555" }}>
+                    予算目安: {shop.budgetText}
+                  </p>
+                ) : null}
+
+                {shop.imageUrl ? (
+                  <img
+                    src={shop.imageUrl}
+                    alt={shop.name}
+                    style={{
+                      width: "100%",
+                      borderRadius: 12,
+                      objectFit: "cover",
+                      maxHeight: 180,
+                    }}
+                  />
+                ) : null}
+
+                {shop.sourceUrl ? (
+                  <a
+                    href={shop.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "#2563eb", fontWeight: "bold" }}
+                  >
+                    お店情報を見る
+                  </a>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
             <div
               style={{
                 display: "flex",
