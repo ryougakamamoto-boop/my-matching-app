@@ -1940,12 +1940,27 @@ export default function HomePage() {
                             </h3>
 
                             <p
-                              style={{
-                                margin: "0 0 12px",
-                                color: "#555",
-                              }}
-                            >
-                              {person.bio || "自己紹介はまだありません"}
+                                style={{
+                                  margin: "0 0 12px",
+                                  color: "#555",
+                                }}
+                              >
+                                {person.bio || "自己紹介はまだありません"}
+                              </p>
+
+                              <p style={{ margin: "0 0 8px", color: "red", fontSize: 12 }}>
+                                画像枚数: {person.imageUrls?.length ?? 0}
+                              </p>
+
+                              <p
+                                style={{
+                                  margin: "0 0 8px",
+                                  color: "red",
+                                  fontSize: 12,
+                                  wordBreak: "break-all",
+                                }}
+                              >
+                                1枚目URL: {person.imageUrls?.[0] || "なし"}
                             </p>
 
                             {person.height ? <p>身長: {person.height}cm</p> : null}
