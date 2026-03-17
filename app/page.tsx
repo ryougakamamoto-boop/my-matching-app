@@ -1836,7 +1836,6 @@ export default function HomePage() {
                             userSelect: "none",
                             display: "flex",
                             flexDirection: "column",
-                            justifyContent: "space-between",
                           }}
                         >
                           {index === currentIndex && overlay && (
@@ -1866,7 +1865,8 @@ export default function HomePage() {
                           <div
                             style={{
                               position: "relative",
-                              height: "45%",
+                              height: "52%",
+                              flexShrink: 0,
                               background: "#e5e7eb",
                               display: "flex",
                               alignItems: "center",
@@ -1884,8 +1884,9 @@ export default function HomePage() {
                                   style={{
                                     width: "100%",
                                     height: "100%",
-                                    objectFit: "cover",
+                                    objectFit: "contain",
                                     pointerEvents: "none",
+                                    background: "#f3f4f6",
                                   }}
                                 />
 
@@ -1984,6 +1985,8 @@ export default function HomePage() {
                               padding: 20,
                               textAlign: "left",
                               flex: 1,
+                              overflowY: "auto",
+                              minHeight: 0,
                             }}
                           >
                             <h3
