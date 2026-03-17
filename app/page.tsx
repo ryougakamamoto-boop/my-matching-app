@@ -111,6 +111,9 @@ export default function HomePage() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
+  // 追加: 各ユーザーごとの現在表示中画像index
+  const [activeImageIndexes, setActiveImageIndexes] = useState<Record<string, number>>({});
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const currentIndex = people.length - 1;
@@ -176,6 +179,33 @@ export default function HomePage() {
     };
   }, [view, selectedMatch, appUser]);
 
+  function getImageIndex(person: AppUser) {
+    return activeImageIndexes[person.id] ?? 0;
+  }
+
+  function nextImage(person: AppUser) {
+    const total = person.imageUrls?.length ?? 0;
+    if (total <= 1) return;
+
+    setActiveImageIndexes((prev) => ({
+      ...prev,
+      [person.id]: ((prev[person.id] ?? 0) + 1) % total,
+    }));
+  }
+
+  function prevImage(person: AppUser) {
+    const total = person.imageUrls?.length ?? 0;
+    if (total <= 1) return;
+
+    setActiveImageIndexes((prev) => {
+      const current = prev[person.id] ?? 0;
+      return {
+        ...prev,
+        [person.id]: (current - 1 + total) % total,
+      };
+    });
+  }
+
   async function loadReceivedLikes(userId: string) {
     try {
       const res = await fetch(`/api/likes/received?currentUserId=${userId}`, {
@@ -211,6 +241,7 @@ export default function HomePage() {
     };
 
     setPeople([person]);
+    setActiveImageIndexes({ [person.id]: 0 });
     setLastDirection("");
     setOverlay("");
     setView("swipe");
@@ -555,6 +586,7 @@ export default function HomePage() {
     setMessages([]);
     setReceivedLikes([]);
     setSelectedMatch(null);
+    setActiveImageIndexes({});
     setMessage("");
     setView("login");
   }
@@ -576,12 +608,18 @@ export default function HomePage() {
         return;
       }
 
-      setPeople(
-        data.map((item: AppUser) => ({
-          ...item,
-          imageUrls: item.imageUrls ?? [],
-        }))
-      );
+      const mappedPeople = data.map((item: AppUser) => ({
+        ...item,
+        imageUrls: item.imageUrls ?? [],
+      }));
+
+      const initialIndexes: Record<string, number> = {};
+      mappedPeople.forEach((person: AppUser) => {
+        initialIndexes[person.id] = 0;
+      });
+
+      setPeople(mappedPeople);
+      setActiveImageIndexes(initialIndexes);
       setLastDirection("");
       setOverlay("");
       setView("swipe");
@@ -730,7 +768,13 @@ export default function HomePage() {
     setTimeout(() => setOverlay(""), 500);
 
     await handleSwipeApi(user, direction);
+
     setPeople((prev) => prev.filter((_, i) => i !== index));
+    setActiveImageIndexes((prev) => {
+      const next = { ...prev };
+      delete next[user.id];
+      return next;
+    });
   }
 
   async function swipeManually(dir: "left" | "right") {
@@ -745,6 +789,11 @@ export default function HomePage() {
 
     await handleSwipeApi(user, dir);
     setPeople((prev) => prev.slice(0, -1));
+    setActiveImageIndexes((prev) => {
+      const next = { ...prev };
+      delete next[user.id];
+      return next;
+    });
   }
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1661,152 +1710,237 @@ export default function HomePage() {
                     margin: "0 auto",
                   }}
                 >
-                  {people.map((person, index) => (
-                    <TinderCard
-                      key={person.id}
-                      onSwipe={(dir) =>
-                        swiped(dir as SwipeDirection, person, index)
-                      }
-                      onCardLeftScreen={() => {}}
-                      preventSwipe={["up", "down"]}
-                    >
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "90vw",
-                          maxWidth: 360,
-                          height: "65vh",
-                          minHeight: 480,
-                          maxHeight: 560,
-                          background: "#fff",
-                          borderRadius: 24,
-                          boxShadow: "0 12px 30px rgba(0,0,0,0.14)",
-                          overflow: "hidden",
-                          cursor: "grab",
-                          userSelect: "none",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between",
-                        }}
+                  {people.map((person, index) => {
+                    const imageIndex = getImageIndex(person);
+                    const hasImages =
+                      person.imageUrls && person.imageUrls.length > 0;
+                    const currentImageUrl = hasImages
+                      ? person.imageUrls[imageIndex]
+                      : null;
+
+                    return (
+                      <TinderCard
+                        key={person.id}
+                        onSwipe={(dir) =>
+                          swiped(dir as SwipeDirection, person, index)
+                        }
+                        onCardLeftScreen={() => {}}
+                        preventSwipe={["up", "down"]}
                       >
-                        {index === currentIndex && overlay && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "90vw",
+                            maxWidth: 360,
+                            height: "65vh",
+                            minHeight: 480,
+                            maxHeight: 560,
+                            background: "#fff",
+                            borderRadius: 24,
+                            boxShadow: "0 12px 30px rgba(0,0,0,0.14)",
+                            overflow: "hidden",
+                            cursor: "grab",
+                            userSelect: "none",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          {index === currentIndex && overlay && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 20,
+                                left: overlay === "NOPE" ? 20 : "auto",
+                                right: overlay === "LIKE" ? 20 : "auto",
+                                zIndex: 10,
+                                padding: "8px 14px",
+                                border: `4px solid ${
+                                  overlay === "LIKE" ? "#22c55e" : "#ef4444"
+                                }`,
+                                color: overlay === "LIKE" ? "#22c55e" : "#ef4444",
+                                fontSize: 24,
+                                fontWeight: "bold",
+                                borderRadius: 12,
+                                transform: "rotate(-12deg)",
+                                background: "rgba(255,255,255,0.75)",
+                              }}
+                            >
+                              {overlay}
+                            </div>
+                          )}
+
                           <div
                             style={{
-                              position: "absolute",
-                              top: 20,
-                              left: overlay === "NOPE" ? 20 : "auto",
-                              right: overlay === "LIKE" ? 20 : "auto",
-                              zIndex: 10,
-                              padding: "8px 14px",
-                              border: `4px solid ${
-                                overlay === "LIKE" ? "#22c55e" : "#ef4444"
-                              }`,
-                              color: overlay === "LIKE" ? "#22c55e" : "#ef4444",
-                              fontSize: 24,
-                              fontWeight: "bold",
-                              borderRadius: 12,
-                              transform: "rotate(-12deg)",
-                              background: "rgba(255,255,255,0.75)",
+                              position: "relative",
+                              height: "45%",
+                              background: "#e5e7eb",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              overflow: "hidden",
                             }}
                           >
-                            {overlay}
+                            {hasImages ? (
+                              <>
+                                <img
+                                  src={currentImageUrl ?? ""}
+                                  alt={person.name}
+                                  draggable={false}
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                    pointerEvents: "none",
+                                  }}
+                                />
+
+                                {person.imageUrls.length > 1 && (
+                                  <>
+                                    <div
+                                      style={{
+                                        position: "absolute",
+                                        top: 10,
+                                        left: 10,
+                                        right: 10,
+                                        zIndex: 6,
+                                        display: "flex",
+                                        gap: 6,
+                                      }}
+                                    >
+                                      {person.imageUrls.map((_, barIndex) => (
+                                        <div
+                                          key={barIndex}
+                                          style={{
+                                            flex: 1,
+                                            height: 4,
+                                            borderRadius: 999,
+                                            background:
+                                              barIndex === imageIndex
+                                                ? "rgba(255,255,255,0.95)"
+                                                : "rgba(255,255,255,0.35)",
+                                          }}
+                                        />
+                                      ))}
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        prevImage(person);
+                                      }}
+                                      style={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        width: "50%",
+                                        height: "100%",
+                                        border: "none",
+                                        background: "transparent",
+                                        cursor: "pointer",
+                                        zIndex: 7,
+                                      }}
+                                      aria-label="前の画像"
+                                    />
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        nextImage(person);
+                                      }}
+                                      style={{
+                                        position: "absolute",
+                                        top: 0,
+                                        right: 0,
+                                        width: "50%",
+                                        height: "100%",
+                                        border: "none",
+                                        background: "transparent",
+                                        cursor: "pointer",
+                                        zIndex: 7,
+                                      }}
+                                      aria-label="次の画像"
+                                    />
+                                  </>
+                                )}
+                              </>
+                            ) : (
+                              <div style={{ fontSize: 64 }}>👤</div>
+                            )}
                           </div>
-                        )}
 
-                        <div
-                          style={{
-                            height: "45%",
-                            background: "#e5e7eb",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {person.imageUrls && person.imageUrls.length > 0 ? (
-                            <img
-                              src={person.imageUrls[0]}
-                              alt={person.name}
+                          <div
+                            style={{
+                              padding: 20,
+                              textAlign: "left",
+                              flex: 1,
+                            }}
+                          >
+                            <h3
                               style={{
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover",
+                                margin: "0 0 12px",
+                                fontSize: "clamp(24px, 5vw, 30px)",
                               }}
-                            />
-                          ) : (
-                            <div style={{ fontSize: 64 }}>👤</div>
-                          )}
+                            >
+                              {person.name}
+                            </h3>
+
+                            <p
+                              style={{
+                                margin: "0 0 8px",
+                                color: "#555",
+                                fontSize: 16,
+                                lineHeight: 1.5,
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {person.bio || "自己紹介はまだありません"}
+                            </p>
+
+                            {person.height ? (
+                              <p style={{ margin: "0 0 6px", color: "#555" }}>
+                                身長: {person.height}cm
+                              </p>
+                            ) : null}
+
+                            {person.weight ? (
+                              <p style={{ margin: "0 0 6px", color: "#555" }}>
+                                体重: {person.weight}kg
+                              </p>
+                            ) : null}
+
+                            {person.hobbies ? (
+                              <p style={{ margin: "0 0 6px", color: "#555" }}>
+                                趣味: {person.hobbies}
+                              </p>
+                            ) : null}
+
+                            {person.occupation ? (
+                              <p style={{ margin: "0 0 6px", color: "#555" }}>
+                                職業: {person.occupation}
+                              </p>
+                            ) : null}
+
+                            {person.livingArea ? (
+                              <p style={{ margin: "0 0 6px", color: "#555" }}>
+                                住んでいる地域: {person.livingArea}
+                              </p>
+                            ) : null}
+
+                            {person.meetingArea ? (
+                              <p style={{ margin: "0 0 6px", color: "#555" }}>
+                                会える地域: {person.meetingArea}
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
-
-                        <div
-                          style={{
-                            padding: 20,
-                            textAlign: "left",
-                            flex: 1,
-                          }}
-                        >
-                          <h3
-                            style={{
-                              margin: "0 0 12px",
-                              fontSize: "clamp(24px, 5vw, 30px)",
-                            }}
-                          >
-                            {person.name}
-                          </h3>
-
-                          <p
-                            style={{
-                              margin: "0 0 8px",
-                              color: "#555",
-                              fontSize: 16,
-                              lineHeight: 1.5,
-                              wordBreak: "break-word",
-                            }}
-                          >
-                            {person.bio || "自己紹介はまだありません"}
-                          </p>
-
-                          {person.height ? (
-                            <p style={{ margin: "0 0 6px", color: "#555" }}>
-                              身長: {person.height}cm
-                            </p>
-                          ) : null}
-
-                          {person.weight ? (
-                            <p style={{ margin: "0 0 6px", color: "#555" }}>
-                              体重: {person.weight}kg
-                            </p>
-                          ) : null}
-
-                          {person.hobbies ? (
-                            <p style={{ margin: "0 0 6px", color: "#555" }}>
-                              趣味: {person.hobbies}
-                            </p>
-                          ) : null}
-
-                          {person.occupation ? (
-                            <p style={{ margin: "0 0 6px", color: "#555" }}>
-                              職業: {person.occupation}
-                            </p>
-                          ) : null}
-
-                          {person.livingArea ? (
-                            <p style={{ margin: "0 0 6px", color: "#555" }}>
-                              住んでいる地域: {person.livingArea}
-                            </p>
-                          ) : null}
-
-                          {person.meetingArea ? (
-                            <p style={{ margin: "0 0 6px", color: "#555" }}>
-                              会える地域: {person.meetingArea}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                    </TinderCard>
-                  ))}
+                      </TinderCard>
+                    );
+                  })}
                 </div>
 
                 <div
