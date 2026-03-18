@@ -26,7 +26,7 @@ export async function GET(req: Request) {
             id: true,
             name: true,
             bio: true,
-            imageUrl: true,
+            imageUrls: true,
           },
         },
         user2: {
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
             id: true,
             name: true,
             bio: true,
-            imageUrl: true,
+            imageUrls: true,
           },
         },
       },
@@ -43,24 +43,32 @@ export async function GET(req: Request) {
       },
     });
 
-    type MatchItem = (typeof matches)[number];
+    const result = matches.map((match) => {
+      const partner =
+        match.user1Id === currentUserId ? match.user2 : match.user1;
 
-const result = matches.map((match: MatchItem) => {
-  const partner =
-    match.user1Id === currentUserId ? match.user2 : match.user1;
-
-  return {
-    id: match.id,
-    createdAt: match.createdAt,
-    partner,
-  };
-});
+      return {
+        id: match.id,
+        createdAt: match.createdAt,
+        partner: {
+          id: partner.id,
+          name: partner.name,
+          bio: partner.bio,
+          imageUrls: partner.imageUrls ?? [],
+        },
+      };
+    });
 
     return NextResponse.json(result);
   } catch (error) {
     console.error("GET /api/matches error:", error);
     return NextResponse.json(
-      { error: "マッチ取得に失敗しました" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "マッチ取得に失敗しました",
+      },
       { status: 500 }
     );
   }
