@@ -15,49 +15,59 @@ export async function GET(req: Request) {
 
     const matches = await prisma.match.findMany({
       where: {
-        OR: [
-          { user1Id: currentUserId },
-          { user2Id: currentUserId },
-        ],
+        OR: [{ user1Id: currentUserId }, { user2Id: currentUserId }],
       },
-      include: {
-        user1: {
-          select: {
-            id: true,
-            name: true,
-            bio: true,
-            imageUrls: true,
-          },
-        },
-        user2: {
-          select: {
-            id: true,
-            name: true,
-            bio: true,
-            imageUrls: true,
-          },
-        },
+      select: {
+        id: true,
+        createdAt: true,
+        user1Id: true,
+        user2Id: true,
       },
       orderBy: {
         createdAt: "desc",
       },
     });
 
-    const result = matches.map((match) => {
-      const partner =
-        match.user1Id === currentUserId ? match.user2 : match.user1;
+    const partnerIds = matches.map((match) =>
+      match.user1Id === currentUserId ? match.user2Id : match.user1Id
+    );
 
-      return {
-        id: match.id,
-        createdAt: match.createdAt,
-        partner: {
-          id: partner.id,
-          name: partner.name,
-          bio: partner.bio,
-          imageUrls: partner.imageUrls ?? [],
+    const partners = await prisma.user.findMany({
+      where: {
+        id: {
+          in: partnerIds,
         },
-      };
+      },
+      select: {
+        id: true,
+        name: true,
+        bio: true,
+        imageUrls: true,
+      },
     });
+
+    const partnerMap = new Map(partners.map((user) => [user.id, user]));
+
+    const result = matches
+      .map((match) => {
+        const partnerId =
+          match.user1Id === currentUserId ? match.user2Id : match.user1Id;
+
+        const partner = partnerMap.get(partnerId);
+        if (!partner) return null;
+
+        return {
+          id: match.id,
+          createdAt: match.createdAt,
+          partner: {
+            id: partner.id,
+            name: partner.name,
+            bio: partner.bio,
+            imageUrls: partner.imageUrls ?? [],
+          },
+        };
+      })
+      .filter(Boolean);
 
     return NextResponse.json(result);
   } catch (error) {
