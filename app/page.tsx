@@ -253,6 +253,17 @@ const [datePlans, setDatePlans] = useState<
     };
   }, [view, selectedMatch, appUser]);
 
+  useEffect(() => {
+  if (view === "chat") {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
+}, [messages, view]);
+
+useEffect(() => {
+  if (view === "home" && appUser?.id) {
+    loadReceivedLikes(appUser.id);
+  }
+}, [view, appUser?.id]);
   function getImageIndex(person: AppUser) {
     return activeImageIndexes[person.id] ?? 0;
   }
@@ -1883,9 +1894,11 @@ async function generateDatePlans() {
                         onSwipe={(dir) =>
                           swiped(dir as SwipeDirection, person, index)
                         }
+                        
                         onCardLeftScreen={() => {}}
                         preventSwipe={["up", "down"]}
                       >
+                        
                         <div
                           style={{
                             position: "relative",

@@ -32,20 +32,52 @@ export async function GET(req: Request) {
       },
     });
 
-    type ReceivedLike = (typeof likes)[number];
-
-    const result = likes.map((like: ReceivedLike) => {
-      return {
-        id: like.id,
-        createdAt: like.createdAt,
-        fromUser: {
-          id: like.fromUser.id,
-          name: like.fromUser.name,
-          bio: like.fromUser.bio,
-          imageUrls: like.fromUser.imageUrls ?? [],
-        },
-      };
+    const mySwipes = await prisma.swipe.findMany({
+      where: {
+        fromUserId: currentUserId,
+      },
+      select: {
+        toUserId: true,
+      },
     });
+
+    const alreadySwipedUserIds = new Set(
+      mySwipes.map((swipe) => swipe.toUserId)
+    );
+
+    console.log("currentUserId:", currentUserId);
+    console.log(
+      "likes:",
+      likes.map((l) => ({
+        fromUserId: l.fromUserId,
+        toUserId: l.toUserId,
+      }))
+    );
+    console.log("mySwipes:", mySwipes);
+    console.log("alreadySwipedUserIds:", [...alreadySwipedUserIds]);
+
+    const filteredLikes = likes.filter(
+      (like) => !alreadySwipedUserIds.has(like.fromUserId)
+    );
+
+    console.log(
+      "filteredLikes:",
+      filteredLikes.map((l) => ({
+        fromUserId: l.fromUserId,
+        toUserId: l.toUserId,
+      }))
+    );
+
+    const result = filteredLikes.map((like) => ({
+      id: like.id,
+      createdAt: like.createdAt,
+      fromUser: {
+        id: like.fromUser.id,
+        name: like.fromUser.name,
+        bio: like.fromUser.bio,
+        imageUrls: like.fromUser.imageUrls ?? [],
+      },
+    }));
 
     return NextResponse.json(result);
   } catch (error) {

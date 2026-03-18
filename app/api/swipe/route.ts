@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    console.log("SWIPE BODY:", body);
     const { fromUserId, toUserId, action } = body as {
       fromUserId?: string;
       toUserId?: string;
@@ -24,6 +25,31 @@ export async function POST(req: Request) {
       );
     }
 
+    // like / skip のどちらでもスワイプ履歴を保存
+    await prisma.swipe.upsert({
+      where: {
+        fromUserId_toUserId: {
+          fromUserId,
+          toUserId,
+        },
+      },
+      update: {
+        action: action === "like" ? "LIKE" : "PASS",
+      },
+      create: {
+        fromUserId,
+        toUserId,
+        action: action === "like" ? "LIKE" : "PASS",
+      },
+    });
+      const savedSwipe = await prisma.swipe.findFirst({
+  where: {
+    fromUserId,
+    toUserId,
+  },
+});
+console.log("SAVED SWIPE:", savedSwipe);
+    // skip の場合はここで終了
     if (action === "skip") {
       return NextResponse.json({ ok: true, matched: false });
     }
