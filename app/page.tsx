@@ -916,45 +916,54 @@ async function generateDatePlans() {
   }
 
   async function swiped(
-    direction: SwipeDirection,
-    user: AppUser,
-    index: number
-  ) {
-    const result = direction === "right" ? "LIKE" : "NOPE";
-    setLastDirection(result);
-    setOverlay(result);
-    setTimeout(() => setOverlay(""), 500);
+  direction: SwipeDirection,
+  user: AppUser,
+  index: number
+) {
+  const result = direction === "right" ? "LIKE" : "NOPE";
+  setLastDirection(result);
+  setOverlay(result);
+  setTimeout(() => setOverlay(""), 500);
 
-    await handleSwipeApi(user, direction);
+  await handleSwipeApi(user, direction);
 
-    setPeople((prev) => prev.filter((_, i) => i !== index));
-    setActiveImageIndexes((prev) => {
-      const next = { ...prev };
-      delete next[user.id];
-      return next;
-    });
-  }
+  setPeople((prev) => prev.filter((_, i) => i !== index));
+
+  setActiveImageIndexes((prev) => {
+    const next = { ...prev };
+    delete next[user.id];
+    return next;
+  });
+
+  setReceivedLikes((prev) =>
+    prev.filter((item) => item.fromUser.id !== user.id)
+  );
+}
 
   async function swipeManually(dir: "left" | "right") {
-    if (currentIndex < 0 || currentIndex >= people.length) return;
+  if (currentIndex < 0 || currentIndex >= people.length) return;
 
-    const user = people[currentIndex];
-    const result = dir === "right" ? "LIKE" : "NOPE";
+  const user = people[currentIndex];
+  const result = dir === "right" ? "LIKE" : "NOPE";
 
-    setLastDirection(result);
-    setOverlay(result);
-    setTimeout(() => setOverlay(""), 500);
+  setLastDirection(result);
+  setOverlay(result);
+  setTimeout(() => setOverlay(""), 500);
 
-    await handleSwipeApi(user, dir);
+  await handleSwipeApi(user, dir);
 
-    setPeople((prev) => prev.slice(0, -1));
-    setActiveImageIndexes((prev) => {
-      const next = { ...prev };
-      delete next[user.id];
-      return next;
-    });
-  }
+  setPeople((prev) => prev.slice(0, -1));
 
+  setActiveImageIndexes((prev) => {
+    const next = { ...prev };
+    delete next[user.id];
+    return next;
+  });
+
+  setReceivedLikes((prev) =>
+    prev.filter((item) => item.fromUser.id !== user.id)
+  );
+}
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []).slice(0, 5);
 
