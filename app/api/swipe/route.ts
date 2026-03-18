@@ -4,14 +4,15 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-
-    const fromUserId = String(body.fromUserId ?? "").trim();
-    const toUserId = String(body.toUserId ?? "").trim();
-    const action = String(body.action ?? "").trim(); // like or skip
+    const { fromUserId, toUserId, action } = body as {
+      fromUserId?: string;
+      toUserId?: string;
+      action?: "like" | "skip";
+    };
 
     if (!fromUserId || !toUserId || !action) {
       return NextResponse.json(
-        { error: "fromUserId, toUserId, action は必須です" },
+        { error: "fromUserId, toUserId, action が必要です" },
         { status: 400 }
       );
     }
@@ -23,18 +24,10 @@ export async function POST(req: Request) {
       );
     }
 
-    if (action !== "like" && action !== "skip") {
-      return NextResponse.json(
-        { error: "action は like または skip です" },
-        { status: 400 }
-      );
-    }
-
     if (action === "skip") {
       return NextResponse.json({ ok: true, matched: false });
     }
 
-    // 既に like 済みならそのまま返す
     const existingLike = await prisma.like.findFirst({
       where: {
         fromUserId,
@@ -51,7 +44,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // 相手からの like があるか確認
     const reverseLike = await prisma.like.findFirst({
       where: {
         fromUserId: toUserId,
@@ -60,15 +52,23 @@ export async function POST(req: Request) {
     });
 
     if (!reverseLike) {
-      return NextResponse.json({ ok: true, matched: false });
+      return NextResponse.json({
+        ok: true,
+        matched: false,
+      });
     }
 
-    // 既存マッチ確認
     const existingMatch = await prisma.match.findFirst({
       where: {
         OR: [
-          { user1Id: fromUserId, user2Id: toUserId },
-          { user1Id: toUserId, user2Id: fromUserId },
+          {
+            user1Id: fromUserId,
+            user2Id: toUserId,
+          },
+          {
+            user1Id: toUserId,
+            user2Id: fromUserId,
+          },
         ],
       },
     });
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const match = await prisma.match.create({
+    const newMatch = await prisma.match.create({
       data: {
         user1Id: fromUserId,
         user2Id: toUserId,
@@ -91,12 +91,17 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       matched: true,
-      matchId: match.id,
+      matchId: newMatch.id,
     });
   } catch (error) {
     console.error("POST /api/swipe error:", error);
     return NextResponse.json(
-      { error: "スワイプ処理に失敗しました" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "スワイプ処理に失敗しました",
+      },
       { status: 500 }
     );
   }
