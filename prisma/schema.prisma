@@ -12,6 +12,7 @@ model User {
   authId         String   @unique
   email          String   @unique
   name           String
+  birthDate DateTime?
   biologicalSex  String
   romanticTarget String
   height         Int?
