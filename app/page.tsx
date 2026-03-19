@@ -1412,16 +1412,6 @@ export default function HomePage() {
           margin: "0 auto",
         }}
       >
-        <h1
-          style={{
-            textAlign: "center",
-            fontSize: "clamp(28px, 6vw, 48px)",
-            marginBottom: 24,
-            lineHeight: 1.2,
-          }}
-        >
-          学生が作ったマッチングアプリ
-        </h1>
 
         {view === "loading" && (
           <p style={{ textAlign: "center" }}>読み込み中...</p>
@@ -1574,12 +1564,6 @@ export default function HomePage() {
               </>
             )}
 
-            <p style={{ textAlign: "center", marginBottom: 8 }}>
-              ログイン中: {appUser.email}
-            </p>
-            <p style={{ textAlign: "center", marginBottom: 8 }}>
-              ユーザー名: {appUser.name}
-            </p>
             <p style={{ textAlign: "center", marginBottom: 8 }}>
               性別: {appUser.biologicalSex}
             </p>
@@ -1975,10 +1959,6 @@ export default function HomePage() {
             </div>
 
             <h2 style={{ textAlign: "center", marginBottom: 12 }}>探す</h2>
-            <p style={{ textAlign: "center", marginBottom: 20 }}>
-              現在のユーザー: <strong>{appUser.name}</strong>
-            </p>
-
             {people.length === 0 ? (
               <p style={{ textAlign: "center" }}>表示できるユーザーがいません</p>
             ) : (
