@@ -36,7 +36,7 @@ type AppUser = {
   hobbies?: string | null;
   occupation?: string | null;
   livingArea?: string | null;
-  meetingArea?: string | null;
+  meetingArea: string[];
   bio?: string | null;
   imageUrls: string[];
 };
@@ -150,10 +150,20 @@ export default function HomePage() {
   const [hobbies, setHobbies] = useState("");
   const [occupation, setOccupation] = useState("");
   const [livingArea, setLivingArea] = useState("");
-  const [meetingArea, setMeetingArea] = useState("");
+  const [meetingArea, setMeetingArea] = useState<string[]>([]);
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [sortType, setSortType] = useState<"distance" | "recent" | "active">(
+    "distance"
+  );
+  const [minAgeFilter, setMinAgeFilter] = useState("");
+  const [maxAgeFilter, setMaxAgeFilter] = useState("");
+  const [minHeightFilter, setMinHeightFilter] = useState("");
+  const [maxHeightFilter, setMaxHeightFilter] = useState("");
+  const [livingAreaFilter, setLivingAreaFilter] = useState("");
+  const [meetingAreaFilter, setMeetingAreaFilter] = useState("");
 
   const [people, setPeople] = useState<AppUser[]>([]);
   const [matches, setMatches] = useState<MatchItem[]>([]);
@@ -220,6 +230,14 @@ export default function HomePage() {
     }
 
     return age;
+  }
+
+  function toggleMeetingArea(area: string) {
+    setMeetingArea((prev) =>
+      prev.includes(area)
+        ? prev.filter((item) => item !== area)
+        : [...prev, area]
+    );
   }
 
   useEffect(() => {
@@ -426,7 +444,7 @@ export default function HomePage() {
       hobbies: null,
       occupation: null,
       livingArea: null,
-      meetingArea: null,
+      meetingArea: [],
       bio: item.fromUser.bio ?? null,
       imageUrls: item.fromUser.imageUrls ?? [],
     };
@@ -455,7 +473,7 @@ export default function HomePage() {
     setHobbies(appUser.hobbies ?? "");
     setOccupation(appUser.occupation ?? "");
     setLivingArea(appUser.livingArea ?? "");
-    setMeetingArea(appUser.meetingArea ?? "");
+    setMeetingArea(appUser.meetingArea ?? []);
     setPreviewUrls(appUser.imageUrls ?? []);
     setImageFiles([]);
     setView("editProfile");
@@ -516,7 +534,7 @@ export default function HomePage() {
           hobbies: hobbies.trim() || null,
           occupation: occupation.trim() || null,
           livingArea: livingArea.trim() || null,
-          meetingArea: meetingArea.trim() || null,
+          meetingArea,
         }),
       });
 
@@ -527,7 +545,11 @@ export default function HomePage() {
         return;
       }
 
-      setAppUser(result);
+      setAppUser({
+        ...result,
+        imageUrls: result.imageUrls ?? [],
+        meetingArea: result.meetingArea ?? [],
+      });
       setPreviewUrls(result.imageUrls ?? []);
       setImageFiles([]);
       setMessage("プロフィールを更新しました");
@@ -550,7 +572,19 @@ export default function HomePage() {
       setLoading(true);
       setMessage("");
 
-      const res = await fetch(`/api/candidates?currentUserId=${currentUserId}`, {
+      const params = new URLSearchParams({
+        currentUserId,
+        sort: sortType,
+      });
+
+      if (minAgeFilter) params.set("minAge", minAgeFilter);
+      if (maxAgeFilter) params.set("maxAge", maxAgeFilter);
+      if (minHeightFilter) params.set("minHeight", minHeightFilter);
+      if (maxHeightFilter) params.set("maxHeight", maxHeightFilter);
+      if (livingAreaFilter) params.set("livingArea", livingAreaFilter);
+      if (meetingAreaFilter) params.set("meetingArea", meetingAreaFilter);
+
+      const res = await fetch(`/api/candidates?${params.toString()}`, {
         cache: "no-store",
       });
       const data = await res.json();
@@ -565,6 +599,7 @@ export default function HomePage() {
       const mappedPeople = data.map((item: AppUser) => ({
         ...item,
         imageUrls: item.imageUrls ?? [],
+        meetingArea: item.meetingArea ?? [],
       }));
 
       const initialIndexes: Record<string, number> = {};
@@ -642,7 +677,7 @@ export default function HomePage() {
             hobbies: null,
             occupation: null,
             livingArea: null,
-            meetingArea: null,
+            meetingArea: [],
           }),
         });
 
@@ -671,6 +706,7 @@ export default function HomePage() {
       setAppUser({
         ...data,
         imageUrls: data.imageUrls ?? [],
+        meetingArea: data.meetingArea ?? [],
       });
 
       await loadReceivedLikes(data.id);
@@ -745,7 +781,7 @@ export default function HomePage() {
           hobbies: hobbies.trim() || null,
           occupation: occupation.trim() || null,
           livingArea: livingArea.trim() || null,
-          meetingArea: meetingArea.trim() || null,
+          meetingArea,
         }),
       });
 
@@ -769,7 +805,7 @@ export default function HomePage() {
       setHobbies("");
       setOccupation("");
       setLivingArea("");
-      setMeetingArea("");
+      setMeetingArea([]);
       setImageFiles([]);
       setPreviewUrls([]);
       setView("login");
@@ -850,7 +886,19 @@ export default function HomePage() {
       setLoading(true);
       setMessage("");
 
-      const res = await fetch(`/api/candidates?currentUserId=${appUser.id}`, {
+      const params = new URLSearchParams({
+        currentUserId: appUser.id,
+        sort: sortType,
+      });
+
+      if (minAgeFilter) params.set("minAge", minAgeFilter);
+      if (maxAgeFilter) params.set("maxAge", maxAgeFilter);
+      if (minHeightFilter) params.set("minHeight", minHeightFilter);
+      if (maxHeightFilter) params.set("maxHeight", maxHeightFilter);
+      if (livingAreaFilter) params.set("livingArea", livingAreaFilter);
+      if (meetingAreaFilter) params.set("meetingArea", meetingAreaFilter);
+
+      const res = await fetch(`/api/candidates?${params.toString()}`, {
         cache: "no-store",
       });
       const data = await res.json();
@@ -863,6 +911,7 @@ export default function HomePage() {
       const mappedPeople = data.map((item: AppUser) => ({
         ...item,
         imageUrls: item.imageUrls ?? [],
+        meetingArea: item.meetingArea ?? [],
       }));
 
       const initialIndexes: Record<string, number> = {};
@@ -1153,6 +1202,48 @@ export default function HomePage() {
     );
   }
 
+  function renderReceivedLikesBanner() {
+    if (receivedLikes.length === 0) return null;
+
+    return (
+      <div style={{ display: "grid", gap: 10, marginBottom: 16 }}>
+        <div
+          style={{
+            background: "#fff7ed",
+            border: "1px solid #fdba74",
+            color: "#9a3412",
+            padding: 12,
+            borderRadius: 14,
+            textAlign: "center",
+            fontWeight: "bold",
+          }}
+        >
+          あなたに {receivedLikes.length} 件のいいねが来ています
+        </div>
+
+        <button
+          onClick={() => {
+            setBottomTab("discover");
+            setView("receivedLikes");
+          }}
+          style={{
+            width: "100%",
+            padding: "12px 18px",
+            borderRadius: 999,
+            border: "none",
+            background: "#f59e0b",
+            color: "#fff",
+            fontWeight: "bold",
+            fontSize: 15,
+            cursor: "pointer",
+          }}
+        >
+          いいねしてきた人を見る
+        </button>
+      </div>
+    );
+  }
+
   function renderAuthInputs(isRegister: boolean) {
     return (
       <div style={{ display: "grid", gap: 12 }}>
@@ -1215,20 +1306,31 @@ export default function HomePage() {
         )}
 
         {isRegister && (
-          <input
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            style={{
-              width: "100%",
-              padding: 14,
-              borderRadius: 12,
-              border: "1px solid #ccc",
-              fontSize: 16,
-              boxSizing: "border-box",
-              background: "#fff",
-            }}
-          />
+          <div style={{ display: "grid", gap: 6 }}>
+            <label
+              style={{
+                fontSize: 14,
+                fontWeight: "bold",
+                color: "#374151",
+              }}
+            >
+              生年月日
+            </label>
+            <input
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              style={{
+                width: "100%",
+                padding: 14,
+                borderRadius: 12,
+                border: "1px solid #ccc",
+                fontSize: 16,
+                boxSizing: "border-box",
+                background: "#fff",
+              }}
+            />
+          </div>
         )}
 
         <input
@@ -1336,12 +1438,52 @@ export default function HomePage() {
             "住んでいる地域を選択"
           )}
 
-        {isRegister &&
-          renderPrefectureSelect(
-            meetingArea,
-            setMeetingArea,
-            "会える地域を選択"
-          )}
+        {isRegister && (
+          <div style={{ display: "grid", gap: 8 }}>
+            <label
+              style={{
+                fontSize: 14,
+                fontWeight: "bold",
+                color: "#374151",
+              }}
+            >
+              会える地域（複数選択可）
+            </label>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: 8,
+                maxHeight: 220,
+                overflowY: "auto",
+                padding: 10,
+                border: "1px solid #ccc",
+                borderRadius: 12,
+                background: "#fff",
+              }}
+            >
+              {PREFECTURES.map((prefecture) => (
+                <label
+                  key={prefecture}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 14,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={meetingArea.includes(prefecture)}
+                    onChange={() => toggleMeetingArea(prefecture)}
+                  />
+                  {prefecture}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         {isRegister && (
           <>
@@ -1412,7 +1554,6 @@ export default function HomePage() {
           margin: "0 auto",
         }}
       >
-
         {view === "loading" && (
           <p style={{ textAlign: "center" }}>読み込み中...</p>
         )}
@@ -1511,59 +1652,13 @@ export default function HomePage() {
 
         {view === "home" && appUser && (
           <>
-            <h2 style={{ textAlign: "center", marginBottom: 8 }}>マイページ</h2>
+            <h2 style={{ textAlign: "center", marginBottom: 12 }}>マイページ</h2>
 
-            <p
-              style={{
-                textAlign: "center",
-                marginBottom: 20,
-                color: "#666",
-                fontSize: 14,
-              }}
-            >
-              プロフィールと設定を確認できます
+            {renderReceivedLikesBanner()}
+
+            <p style={{ textAlign: "center", marginBottom: 8 }}>
+              ユーザー名: {appUser.name}
             </p>
-
-            {receivedLikes.length > 0 && (
-              <>
-                <div
-                  style={{
-                    background: "#fff7ed",
-                    border: "1px solid #fdba74",
-                    color: "#9a3412",
-                    padding: 12,
-                    borderRadius: 14,
-                    marginBottom: 16,
-                    textAlign: "center",
-                    fontWeight: "bold",
-                  }}
-                >
-                  あなたに {receivedLikes.length} 件のいいねが来ています
-                </div>
-
-                <button
-                  onClick={() => {
-                    setBottomTab("discover");
-                    setView("receivedLikes");
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "14px 20px",
-                    borderRadius: 999,
-                    border: "none",
-                    background: "#f59e0b",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    fontSize: 16,
-                    cursor: "pointer",
-                    marginBottom: 16,
-                  }}
-                >
-                  いいねしてきた人を見る
-                </button>
-              </>
-            )}
-
             <p style={{ textAlign: "center", marginBottom: 8 }}>
               性別: {appUser.biologicalSex}
             </p>
@@ -1684,24 +1779,35 @@ export default function HomePage() {
                 }}
               />
 
-              <input
-                type="date"
-                value={birthDate}
-                disabled
-                style={{
-                  width: "100%",
-                  padding: 14,
-                  borderRadius: 12,
-                  border: "1px solid #ddd",
-                  fontSize: 16,
-                  boxSizing: "border-box",
-                  background: "#f3f4f6",
-                  color: "#666",
-                }}
-              />
-              <p style={{ margin: 0, fontSize: 13, color: "#888" }}>
-                生年月日は登録後に変更できません
-              </p>
+              <div style={{ display: "grid", gap: 6 }}>
+                <label
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "bold",
+                    color: "#374151",
+                  }}
+                >
+                  生年月日
+                </label>
+                <input
+                  type="date"
+                  value={birthDate}
+                  disabled
+                  style={{
+                    width: "100%",
+                    padding: 14,
+                    borderRadius: 12,
+                    border: "1px solid #ddd",
+                    fontSize: 16,
+                    boxSizing: "border-box",
+                    background: "#f3f4f6",
+                    color: "#666",
+                  }}
+                />
+                <p style={{ margin: 0, fontSize: 13, color: "#888" }}>
+                  生年月日は登録後に変更できません
+                </p>
+              </div>
 
               <input
                 type="number"
@@ -1769,11 +1875,50 @@ export default function HomePage() {
                 "住んでいる地域を選択"
               )}
 
-              {renderPrefectureSelect(
-                meetingArea,
-                setMeetingArea,
-                "会える地域を選択"
-              )}
+              <div style={{ display: "grid", gap: 8 }}>
+                <label
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "bold",
+                    color: "#374151",
+                  }}
+                >
+                  会える地域（複数選択可）
+                </label>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 1fr)",
+                    gap: 8,
+                    maxHeight: 220,
+                    overflowY: "auto",
+                    padding: 10,
+                    border: "1px solid #ccc",
+                    borderRadius: 12,
+                    background: "#fff",
+                  }}
+                >
+                  {PREFECTURES.map((prefecture) => (
+                    <label
+                      key={prefecture}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 14,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={meetingArea.includes(prefecture)}
+                        onChange={() => toggleMeetingArea(prefecture)}
+                      />
+                      {prefecture}
+                    </label>
+                  ))}
+                </div>
+              </div>
 
               <input
                 type="file"
@@ -1959,6 +2104,132 @@ export default function HomePage() {
             </div>
 
             <h2 style={{ textAlign: "center", marginBottom: 12 }}>探す</h2>
+
+            {renderReceivedLikesBanner()}
+
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                marginBottom: 16,
+              }}
+            >
+              <select
+                value={sortType}
+                onChange={(e) =>
+                  setSortType(e.target.value as "distance" | "recent" | "active")
+                }
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #ccc",
+                  fontSize: 14,
+                  background: "#fff",
+                  boxSizing: "border-box",
+                }}
+              >
+                <option value="distance">距離が近い順</option>
+                <option value="recent">登録が新しい順</option>
+                <option value="active">ログインが新しい順</option>
+              </select>
+
+              <div
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+              >
+                <input
+                  type="number"
+                  placeholder="最低年齢"
+                  value={minAgeFilter}
+                  onChange={(e) => setMinAgeFilter(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #ccc",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                  }}
+                />
+                <input
+                  type="number"
+                  placeholder="最高年齢"
+                  value={maxAgeFilter}
+                  onChange={(e) => setMaxAgeFilter(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #ccc",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              <div
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+              >
+                <input
+                  type="number"
+                  placeholder="最低身長"
+                  value={minHeightFilter}
+                  onChange={(e) => setMinHeightFilter(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #ccc",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                  }}
+                />
+                <input
+                  type="number"
+                  placeholder="最高身長"
+                  value={maxHeightFilter}
+                  onChange={(e) => setMaxHeightFilter(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #ccc",
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              {renderPrefectureSelect(
+                livingAreaFilter,
+                setLivingAreaFilter,
+                "住んでいる地域で絞る"
+              )}
+
+              {renderPrefectureSelect(
+                meetingAreaFilter,
+                setMeetingAreaFilter,
+                "会える地域で絞る"
+              )}
+
+              <button
+                onClick={openSwipe}
+                style={{
+                  width: "100%",
+                  padding: "12px 18px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#111827",
+                  color: "#fff",
+                  fontWeight: "bold",
+                  fontSize: 15,
+                  cursor: "pointer",
+                }}
+              >
+                この条件で探す
+              </button>
+            </div>
+
             {people.length === 0 ? (
               <p style={{ textAlign: "center" }}>表示できるユーザーがいません</p>
             ) : (
@@ -2204,7 +2475,7 @@ export default function HomePage() {
                                         ? person.bio.length > 28
                                           ? `${person.bio.slice(0, 28)}...`
                                           : person.bio
-                                        : "名前をタップして詳しい自己紹介を見る"}
+                                        : "名前をタップして詳しいプロフィールを見る"}
                                     </p>
                                   </div>
                                 </>
@@ -2306,6 +2577,8 @@ export default function HomePage() {
         {view === "matches" && appUser && (
           <>
             <h2 style={{ textAlign: "center", marginBottom: 20 }}>マッチ一覧</h2>
+
+            {renderReceivedLikesBanner()}
 
             {matches.length === 0 ? (
               <p style={{ textAlign: "center" }}>まだマッチがありません</p>
@@ -2875,9 +3148,9 @@ export default function HomePage() {
                       住んでいる地域: {detailPerson.livingArea}
                     </p>
                   ) : null}
-                  {detailPerson.meetingArea ? (
+                  {detailPerson.meetingArea.length > 0 ? (
                     <p style={{ margin: 0 }}>
-                      会える地域: {detailPerson.meetingArea}
+                      会える地域: {detailPerson.meetingArea.join("、")}
                     </p>
                   ) : null}
                 </div>

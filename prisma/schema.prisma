@@ -24,6 +24,7 @@ model User {
   bio            String?
   imageUrls      String[]
   createdAt      DateTime @default(now())
+  lastLoginAt DateTime?
 
   sentLikes      Like[]    @relation("sentLikes")
   receivedLikes  Like[]    @relation("receivedLikes")
