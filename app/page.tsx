@@ -16,6 +16,8 @@ type View =
   | "receivedLikes"
   | "editProfile";
 
+type BottomTab = "discover" | "matches" | "mypage";
+
 type AuthUser = {
   id: string;
   email?: string;
@@ -130,6 +132,7 @@ const PREFECTURES = [
 
 export default function HomePage() {
   const [view, setView] = useState<View>("loading");
+  const [bottomTab, setBottomTab] = useState<BottomTab>("discover");
 
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
@@ -172,6 +175,7 @@ export default function HomePage() {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const currentIndex = people.length - 1;
+
   const [dateIntentLoading, setDateIntentLoading] = useState(false);
   const [datePlanLoading, setDatePlanLoading] = useState(false);
   const [bothWantToMeet, setBothWantToMeet] = useState(false);
@@ -427,6 +431,7 @@ export default function HomePage() {
       imageUrls: item.fromUser.imageUrls ?? [],
     };
 
+    setBottomTab("discover");
     setPeople([person]);
     setActiveImageIndexes({ [person.id]: 0 });
     setLastDirection("");
@@ -438,6 +443,7 @@ export default function HomePage() {
   function openEditProfile() {
     if (!appUser) return;
 
+    setBottomTab("mypage");
     setBio(appUser.bio ?? "");
     setBirthDate(
       appUser.birthDate
@@ -525,6 +531,7 @@ export default function HomePage() {
       setPreviewUrls(result.imageUrls ?? []);
       setImageFiles([]);
       setMessage("プロフィールを更新しました");
+      setBottomTab("mypage");
       setView("home");
     } catch (error) {
       console.error(error);
@@ -533,6 +540,50 @@ export default function HomePage() {
           ? error.message
           : "プロフィール更新中にエラーが発生しました"
       );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function openSwipeAfterLogin(currentUserId: string) {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const res = await fetch(`/api/candidates?currentUserId=${currentUserId}`, {
+        cache: "no-store",
+      });
+      const data = await res.json();
+
+      if (!res.ok || !Array.isArray(data)) {
+        setMessage("候補取得に失敗しました");
+        setBottomTab("mypage");
+        setView("home");
+        return;
+      }
+
+      const mappedPeople = data.map((item: AppUser) => ({
+        ...item,
+        imageUrls: item.imageUrls ?? [],
+      }));
+
+      const initialIndexes: Record<string, number> = {};
+      mappedPeople.forEach((person: AppUser) => {
+        initialIndexes[person.id] = 0;
+      });
+
+      setPeople(mappedPeople);
+      setActiveImageIndexes(initialIndexes);
+      setLastDirection("");
+      setOverlay("");
+      setDetailPerson(null);
+      setBottomTab("discover");
+      setView("swipe");
+    } catch (error) {
+      console.error(error);
+      setMessage("候補取得中にエラーが発生しました");
+      setBottomTab("mypage");
+      setView("home");
     } finally {
       setLoading(false);
     }
@@ -623,7 +674,7 @@ export default function HomePage() {
       });
 
       await loadReceivedLikes(data.id);
-      setView("home");
+      await openSwipeAfterLogin(data.id);
     } catch (error) {
       console.error("checkSession error =", error);
       setMessage(
@@ -788,6 +839,7 @@ export default function HomePage() {
     setActiveImageIndexes({});
     setDetailPerson(null);
     setMessage("");
+    setBottomTab("discover");
     setView("login");
   }
 
@@ -823,6 +875,7 @@ export default function HomePage() {
       setLastDirection("");
       setOverlay("");
       setDetailPerson(null);
+      setBottomTab("discover");
       setView("swipe");
     } catch (error) {
       console.error(error);
@@ -852,6 +905,7 @@ export default function HomePage() {
       }
 
       setMatches(data);
+      setBottomTab("matches");
       setView("matches");
     } catch (error) {
       console.error(error);
@@ -881,6 +935,7 @@ export default function HomePage() {
       }
 
       setMessages(data);
+      setBottomTab("matches");
       setView("chat");
     } catch (error) {
       console.error(error);
@@ -1341,6 +1396,7 @@ export default function HomePage() {
         justifyContent: "center",
         alignItems: view === "chat" ? "stretch" : "center",
         padding: 16,
+        paddingBottom: appUser ? 92 : 16,
         boxSizing: "border-box",
       }}
     >
@@ -1465,7 +1521,7 @@ export default function HomePage() {
 
         {view === "home" && appUser && (
           <>
-            <h2 style={{ textAlign: "center", marginBottom: 8 }}>ホーム</h2>
+            <h2 style={{ textAlign: "center", marginBottom: 8 }}>マイページ</h2>
 
             <p
               style={{
@@ -1475,7 +1531,7 @@ export default function HomePage() {
                 fontSize: 14,
               }}
             >
-              学生が制作したデモ版マッチングサイトです
+              プロフィールと設定を確認できます
             </p>
 
             {receivedLikes.length > 0 && (
@@ -1496,7 +1552,10 @@ export default function HomePage() {
                 </div>
 
                 <button
-                  onClick={() => setView("receivedLikes")}
+                  onClick={() => {
+                    setBottomTab("discover");
+                    setView("receivedLikes");
+                  }}
                   style={{
                     width: "100%",
                     padding: "14px 20px",
@@ -1549,38 +1608,6 @@ export default function HomePage() {
               </button>
 
               <button
-                onClick={openSwipe}
-                style={{
-                  padding: "14px 20px",
-                  borderRadius: 999,
-                  border: "none",
-                  background: "#ef4444",
-                  color: "#fff",
-                  fontWeight: "bold",
-                  fontSize: 16,
-                  cursor: "pointer",
-                }}
-              >
-                新規の相手を見る
-              </button>
-
-              <button
-                onClick={openMatches}
-                style={{
-                  padding: "14px 20px",
-                  borderRadius: 999,
-                  border: "none",
-                  background: "#2563eb",
-                  color: "#fff",
-                  fontWeight: "bold",
-                  fontSize: 16,
-                  cursor: "pointer",
-                }}
-              >
-                マッチした相手を見る
-              </button>
-
-              <button
                 onClick={handleLogout}
                 style={{
                   padding: "14px 20px",
@@ -1603,7 +1630,10 @@ export default function HomePage() {
           <>
             <div style={{ marginBottom: 16 }}>
               <button
-                onClick={() => setView("home")}
+                onClick={() => {
+                  setBottomTab("mypage");
+                  setView("home");
+                }}
                 style={{
                   border: "none",
                   background: "transparent",
@@ -1613,7 +1643,7 @@ export default function HomePage() {
                   padding: 0,
                 }}
               >
-                ← ホームに戻る
+                ← マイページに戻る
               </button>
             </div>
 
@@ -1819,7 +1849,10 @@ export default function HomePage() {
           <>
             <div style={{ marginBottom: 16 }}>
               <button
-                onClick={() => setView("home")}
+                onClick={() => {
+                  setBottomTab("discover");
+                  setView("swipe");
+                }}
                 style={{
                   border: "none",
                   background: "transparent",
@@ -1829,7 +1862,7 @@ export default function HomePage() {
                   padding: 0,
                 }}
               >
-                ← ホームに戻る
+                ← 探すに戻る
               </button>
             </div>
 
@@ -1924,7 +1957,10 @@ export default function HomePage() {
           <>
             <div style={{ marginBottom: 16 }}>
               <button
-                onClick={() => setView("home")}
+                onClick={() => {
+                  setBottomTab("mypage");
+                  setView("home");
+                }}
                 style={{
                   border: "none",
                   background: "transparent",
@@ -1934,11 +1970,11 @@ export default function HomePage() {
                   padding: 0,
                 }}
               >
-                ← ホームに戻る
+                ← マイページへ
               </button>
             </div>
 
-            <h2 style={{ textAlign: "center", marginBottom: 12 }}>スワイプ</h2>
+            <h2 style={{ textAlign: "center", marginBottom: 12 }}>探す</h2>
             <p style={{ textAlign: "center", marginBottom: 20 }}>
               現在のユーザー: <strong>{appUser.name}</strong>
             </p>
@@ -2289,25 +2325,7 @@ export default function HomePage() {
 
         {view === "matches" && appUser && (
           <>
-            <div style={{ marginBottom: 16 }}>
-              <button
-                onClick={() => setView("home")}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  color: "#2563eb",
-                  cursor: "pointer",
-                  fontSize: 16,
-                  padding: 0,
-                }}
-              >
-                ← ホームに戻る
-              </button>
-            </div>
-
-            <h2 style={{ textAlign: "center", marginBottom: 20 }}>
-              マッチ一覧
-            </h2>
+            <h2 style={{ textAlign: "center", marginBottom: 20 }}>マッチ一覧</h2>
 
             {matches.length === 0 ? (
               <p style={{ textAlign: "center" }}>まだマッチがありません</p>
@@ -2396,7 +2414,10 @@ export default function HomePage() {
           <>
             <div style={{ marginBottom: 16 }}>
               <button
-                onClick={() => setView("matches")}
+                onClick={() => {
+                  setBottomTab("matches");
+                  setView("matches");
+                }}
                 style={{
                   border: "none",
                   background: "transparent",
@@ -2889,6 +2910,83 @@ export default function HomePage() {
           <p style={{ marginTop: 20, textAlign: "center" }}>{message}</p>
         )}
       </div>
+
+      {appUser &&
+        view !== "loading" &&
+        view !== "login" &&
+        view !== "register" && (
+          <div
+            style={{
+              position: "fixed",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "#fff",
+              borderTop: "1px solid #e5e7eb",
+              display: "flex",
+              justifyContent: "space-around",
+              padding: "10px 8px calc(10px + env(safe-area-inset-bottom))",
+              zIndex: 999,
+            }}
+          >
+            <button
+              onClick={async () => {
+                setBottomTab("discover");
+                await openSwipe();
+              }}
+              style={{
+                flex: 1,
+                border: "none",
+                background: "transparent",
+                padding: 10,
+                fontWeight: bottomTab === "discover" ? "bold" : "normal",
+                color: bottomTab === "discover" ? "#ef4444" : "#6b7280",
+                fontSize: 14,
+                cursor: "pointer",
+              }}
+            >
+              探す
+            </button>
+
+            <button
+              onClick={async () => {
+                setBottomTab("matches");
+                await openMatches();
+              }}
+              style={{
+                flex: 1,
+                border: "none",
+                background: "transparent",
+                padding: 10,
+                fontWeight: bottomTab === "matches" ? "bold" : "normal",
+                color: bottomTab === "matches" ? "#2563eb" : "#6b7280",
+                fontSize: 14,
+                cursor: "pointer",
+              }}
+            >
+              マッチ
+            </button>
+
+            <button
+              onClick={() => {
+                setBottomTab("mypage");
+                setView("home");
+              }}
+              style={{
+                flex: 1,
+                border: "none",
+                background: "transparent",
+                padding: 10,
+                fontWeight: bottomTab === "mypage" ? "bold" : "normal",
+                color: bottomTab === "mypage" ? "#10b981" : "#6b7280",
+                fontSize: 14,
+                cursor: "pointer",
+              }}
+            >
+              マイページ
+            </button>
+          </div>
+        )}
     </main>
   );
 }
