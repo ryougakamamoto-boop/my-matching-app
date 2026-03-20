@@ -3148,11 +3148,22 @@ export default function HomePage() {
                       住んでいる地域: {detailPerson.livingArea}
                     </p>
                   ) : null}
-                  {detailPerson.meetingArea.length > 0 ? (
-                    <p style={{ margin: 0 }}>
-                      会える地域: {detailPerson.meetingArea.join("、")}
-                    </p>
-                  ) : null}
+                  {detailPerson.occupation ? (
+  <p style={{ margin: 0 }}>職業: {detailPerson.occupation}</p>
+) : null}
+
+{detailPerson.livingArea ? (
+  <p style={{ margin: 0 }}>
+    住んでいる地域: {detailPerson.livingArea}
+  </p>
+) : null}
+
+{Array.isArray(detailPerson.meetingArea) &&
+detailPerson.meetingArea.length > 0 ? (
+  <p style={{ margin: 0 }}>
+    会える地域: {detailPerson.meetingArea.join("、")}
+  </p>
+) : null}
                 </div>
               </div>
             </div>
