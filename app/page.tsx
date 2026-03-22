@@ -2326,9 +2326,9 @@ export default function HomePage() {
                     position: "relative",
                     width: "92vw",
                     maxWidth: 380,
-                    height: "72vh",
-                    minHeight: 520,
-                    maxHeight: 640,
+                    height: "78vh",
+                    minHeight: 560,
+                    maxHeight: 720,
                     margin: "0 auto",
                   }}
                 >
@@ -2354,9 +2354,9 @@ export default function HomePage() {
                             position: "relative",
                             width: "92vw",
                             maxWidth: 380,
-                            height: "72vh",
-                            minHeight: 520,
-                            maxHeight: 640,
+                            height: "78vh",
+                            minHeight: 560,
+                            maxHeight: 720,
                           }}
                         >
                           <div
@@ -2369,6 +2369,7 @@ export default function HomePage() {
                               overflow: "hidden",
                               display: "flex",
                               flexDirection: "column",
+                              padding: 0,
                             }}
                           >
                             {index === currentIndex && overlay && (
@@ -2399,7 +2400,7 @@ export default function HomePage() {
                             <div
                               style={{
                                 position: "relative",
-                                height: 420,
+                                height: "100％",
                                 background: "#000",
                                 display: "flex",
                                 alignItems: "center",
