@@ -164,6 +164,7 @@ export default function HomePage() {
   const [maxHeightFilter, setMaxHeightFilter] = useState("");
   const [livingAreaFilter, setLivingAreaFilter] = useState("");
   const [meetingAreaFilter, setMeetingAreaFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   const [people, setPeople] = useState<AppUser[]>([]);
   const [matches, setMatches] = useState<MatchItem[]>([]);
@@ -473,7 +474,7 @@ export default function HomePage() {
     setHobbies(appUser.hobbies ?? "");
     setOccupation(appUser.occupation ?? "");
     setLivingArea(appUser.livingArea ?? "");
-    setMeetingArea(appUser.meetingArea ?? []);
+    setMeetingArea(Array.isArray(appUser.meetingArea) ? appUser.meetingArea : []);
     setPreviewUrls(appUser.imageUrls ?? []);
     setImageFiles([]);
     setView("editProfile");
@@ -547,10 +548,14 @@ export default function HomePage() {
 
       setAppUser({
         ...result,
-        imageUrls: result.imageUrls ?? [],
-        meetingArea: result.meetingArea ?? [],
+        imageUrls: Array.isArray(result.imageUrls) ? result.imageUrls : [],
+        meetingArea: Array.isArray(result.meetingArea)
+          ? result.meetingArea
+          : result.meetingArea
+          ? [result.meetingArea]
+          : [],
       });
-      setPreviewUrls(result.imageUrls ?? []);
+      setPreviewUrls(Array.isArray(result.imageUrls) ? result.imageUrls : []);
       setImageFiles([]);
       setMessage("プロフィールを更新しました");
       setBottomTab("mypage");
@@ -596,10 +601,14 @@ export default function HomePage() {
         return;
       }
 
-      const mappedPeople = data.map((item: AppUser) => ({
+      const mappedPeople = data.map((item: any) => ({
         ...item,
-        imageUrls: item.imageUrls ?? [],
-        meetingArea: item.meetingArea ?? [],
+        imageUrls: Array.isArray(item.imageUrls) ? item.imageUrls : [],
+        meetingArea: Array.isArray(item.meetingArea)
+          ? item.meetingArea
+          : item.meetingArea
+          ? [item.meetingArea]
+          : [],
       }));
 
       const initialIndexes: Record<string, number> = {};
@@ -705,8 +714,12 @@ export default function HomePage() {
 
       setAppUser({
         ...data,
-        imageUrls: data.imageUrls ?? [],
-        meetingArea: data.meetingArea ?? [],
+        imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+        meetingArea: Array.isArray(data.meetingArea)
+          ? data.meetingArea
+          : data.meetingArea
+          ? [data.meetingArea]
+          : [],
       });
 
       await loadReceivedLikes(data.id);
@@ -908,10 +921,14 @@ export default function HomePage() {
         return;
       }
 
-      const mappedPeople = data.map((item: AppUser) => ({
+      const mappedPeople = data.map((item: any) => ({
         ...item,
-        imageUrls: item.imageUrls ?? [],
-        meetingArea: item.meetingArea ?? [],
+        imageUrls: Array.isArray(item.imageUrls) ? item.imageUrls : [],
+        meetingArea: Array.isArray(item.meetingArea)
+          ? item.meetingArea
+          : item.meetingArea
+          ? [item.meetingArea]
+          : [],
       }));
 
       const initialIndexes: Record<string, number> = {};
@@ -2114,120 +2131,190 @@ export default function HomePage() {
                 marginBottom: 16,
               }}
             >
-              <select
-                value={sortType}
-                onChange={(e) =>
-                  setSortType(e.target.value as "distance" | "recent" | "active")
-                }
-                style={{
-                  width: "100%",
-                  padding: 12,
-                  borderRadius: 12,
-                  border: "1px solid #ccc",
-                  fontSize: 14,
-                  background: "#fff",
-                  boxSizing: "border-box",
-                }}
-              >
-                <option value="distance">距離が近い順</option>
-                <option value="recent">登録が新しい順</option>
-                <option value="active">ログインが新しい順</option>
-              </select>
-
-              <div
-                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
-              >
-                <input
-                  type="number"
-                  placeholder="最低年齢"
-                  value={minAgeFilter}
-                  onChange={(e) => setMinAgeFilter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: 12,
-                    borderRadius: 12,
-                    border: "1px solid #ccc",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                  }}
-                />
-                <input
-                  type="number"
-                  placeholder="最高年齢"
-                  value={maxAgeFilter}
-                  onChange={(e) => setMaxAgeFilter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: 12,
-                    borderRadius: 12,
-                    border: "1px solid #ccc",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <div
-                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
-              >
-                <input
-                  type="number"
-                  placeholder="最低身長"
-                  value={minHeightFilter}
-                  onChange={(e) => setMinHeightFilter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: 12,
-                    borderRadius: 12,
-                    border: "1px solid #ccc",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                  }}
-                />
-                <input
-                  type="number"
-                  placeholder="最高身長"
-                  value={maxHeightFilter}
-                  onChange={(e) => setMaxHeightFilter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: 12,
-                    borderRadius: 12,
-                    border: "1px solid #ccc",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              {renderPrefectureSelect(
-                livingAreaFilter,
-                setLivingAreaFilter,
-                "住んでいる地域で絞る"
-              )}
-
-              {renderPrefectureSelect(
-                meetingAreaFilter,
-                setMeetingAreaFilter,
-                "会える地域で絞る"
-              )}
-
               <button
-                onClick={openSwipe}
+                onClick={() => setShowFilters((prev) => !prev)}
                 style={{
                   width: "100%",
                   padding: "12px 18px",
                   borderRadius: 999,
-                  border: "none",
-                  background: "#111827",
-                  color: "#fff",
+                  border: "1px solid #d1d5db",
+                  background: "#fff",
+                  color: "#111827",
                   fontWeight: "bold",
                   fontSize: 15,
                   cursor: "pointer",
                 }}
               >
-                この条件で探す
+                {showFilters ? "絞り込みを閉じる" : "絞り込む"}
               </button>
+
+              {showFilters && (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: 10,
+                    padding: 12,
+                    borderRadius: 16,
+                    background: "#f9fafb",
+                    border: "1px solid #e5e7eb",
+                  }}
+                >
+                  <select
+                    value={sortType}
+                    onChange={(e) =>
+                      setSortType(
+                        e.target.value as "distance" | "recent" | "active"
+                      )
+                    }
+                    style={{
+                      width: "100%",
+                      padding: 12,
+                      borderRadius: 12,
+                      border: "1px solid #ccc",
+                      fontSize: 14,
+                      background: "#fff",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <option value="distance">距離が近い順</option>
+                    <option value="recent">登録が新しい順</option>
+                    <option value="active">ログインが新しい順</option>
+                  </select>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 8,
+                    }}
+                  >
+                    <input
+                      type="number"
+                      placeholder="最低年齢"
+                      value={minAgeFilter}
+                      onChange={(e) => setMinAgeFilter(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: 12,
+                        borderRadius: 12,
+                        border: "1px solid #ccc",
+                        fontSize: 14,
+                        boxSizing: "border-box",
+                        background: "#fff",
+                      }}
+                    />
+                    <input
+                      type="number"
+                      placeholder="最高年齢"
+                      value={maxAgeFilter}
+                      onChange={(e) => setMaxAgeFilter(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: 12,
+                        borderRadius: 12,
+                        border: "1px solid #ccc",
+                        fontSize: 14,
+                        boxSizing: "border-box",
+                        background: "#fff",
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 8,
+                    }}
+                  >
+                    <input
+                      type="number"
+                      placeholder="最低身長"
+                      value={minHeightFilter}
+                      onChange={(e) => setMinHeightFilter(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: 12,
+                        borderRadius: 12,
+                        border: "1px solid #ccc",
+                        fontSize: 14,
+                        boxSizing: "border-box",
+                        background: "#fff",
+                      }}
+                    />
+                    <input
+                      type="number"
+                      placeholder="最高身長"
+                      value={maxHeightFilter}
+                      onChange={(e) => setMaxHeightFilter(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: 12,
+                        borderRadius: 12,
+                        border: "1px solid #ccc",
+                        fontSize: 14,
+                        boxSizing: "border-box",
+                        background: "#fff",
+                      }}
+                    />
+                  </div>
+
+                  {renderPrefectureSelect(
+                    livingAreaFilter,
+                    setLivingAreaFilter,
+                    "住んでいる地域で絞る"
+                  )}
+
+                  {renderPrefectureSelect(
+                    meetingAreaFilter,
+                    setMeetingAreaFilter,
+                    "会える地域で絞る"
+                  )}
+
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={openSwipe}
+                      style={{
+                        flex: 1,
+                        padding: "12px 18px",
+                        borderRadius: 999,
+                        border: "none",
+                        background: "#111827",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: 15,
+                        cursor: "pointer",
+                      }}
+                    >
+                      この条件で探す
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSortType("distance");
+                        setMinAgeFilter("");
+                        setMaxAgeFilter("");
+                        setMinHeightFilter("");
+                        setMaxHeightFilter("");
+                        setLivingAreaFilter("");
+                        setMeetingAreaFilter("");
+                      }}
+                      style={{
+                        padding: "12px 18px",
+                        borderRadius: 999,
+                        border: "1px solid #d1d5db",
+                        background: "#fff",
+                        color: "#111827",
+                        fontWeight: "bold",
+                        fontSize: 15,
+                        cursor: "pointer",
+                      }}
+                    >
+                      リセット
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {people.length === 0 ? (
@@ -2239,9 +2326,9 @@ export default function HomePage() {
                     position: "relative",
                     width: "92vw",
                     maxWidth: 380,
-                    height: "78vh",
-                    minHeight: 560,
-                    maxHeight: 680,
+                    height: "72vh",
+                    minHeight: 520,
+                    maxHeight: 640,
                     margin: "0 auto",
                   }}
                 >
@@ -2267,9 +2354,9 @@ export default function HomePage() {
                             position: "relative",
                             width: "92vw",
                             maxWidth: 380,
-                            height: "78vh",
-                            minHeight: 560,
-                            maxHeight: 680,
+                            height: "72vh",
+                            minHeight: 520,
+                            maxHeight: 640,
                           }}
                         >
                           <div
@@ -2312,8 +2399,8 @@ export default function HomePage() {
                             <div
                               style={{
                                 position: "relative",
-                                height: 300,
-                                background: "#f3f4f6",
+                                height: 420,
+                                background: "#000",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -2330,8 +2417,8 @@ export default function HomePage() {
                                     style={{
                                       width: "100%",
                                       height: "100%",
-                                      objectFit: "contain",
-                                      background: "#f8fafc",
+                                      objectFit: "cover",
+                                      background: "#000",
                                       pointerEvents: "none",
                                     }}
                                   />
@@ -2484,25 +2571,6 @@ export default function HomePage() {
                                   👤
                                 </div>
                               )}
-                            </div>
-
-                            <div
-                              style={{
-                                padding: 16,
-                                background: "#fff",
-                                borderTop: "1px solid #f3f4f6",
-                              }}
-                            >
-                              <p
-                                style={{
-                                  margin: 0,
-                                  color: "#6b7280",
-                                  fontSize: 14,
-                                  textAlign: "center",
-                                }}
-                              >
-                                名前をタップすると詳しいプロフィールを表示
-                              </p>
                             </div>
                           </div>
                         </div>
@@ -3052,8 +3120,8 @@ export default function HomePage() {
                     style={{
                       width: "100%",
                       height: "100%",
-                      objectFit: "contain",
-                      background: "#f8fafc",
+                      objectFit: "cover",
+                      background: "#000",
                     }}
                   />
                 ) : (
@@ -3134,36 +3202,31 @@ export default function HomePage() {
                   {detailPerson.height ? (
                     <p style={{ margin: 0 }}>身長: {detailPerson.height}cm</p>
                   ) : null}
+
                   {detailPerson.weight ? (
                     <p style={{ margin: 0 }}>体重: {detailPerson.weight}kg</p>
                   ) : null}
+
                   {detailPerson.hobbies ? (
                     <p style={{ margin: 0 }}>趣味: {detailPerson.hobbies}</p>
                   ) : null}
+
                   {detailPerson.occupation ? (
                     <p style={{ margin: 0 }}>職業: {detailPerson.occupation}</p>
                   ) : null}
+
                   {detailPerson.livingArea ? (
                     <p style={{ margin: 0 }}>
                       住んでいる地域: {detailPerson.livingArea}
                     </p>
                   ) : null}
-                  {detailPerson.occupation ? (
-  <p style={{ margin: 0 }}>職業: {detailPerson.occupation}</p>
-) : null}
 
-{detailPerson.livingArea ? (
-  <p style={{ margin: 0 }}>
-    住んでいる地域: {detailPerson.livingArea}
-  </p>
-) : null}
-
-{Array.isArray(detailPerson.meetingArea) &&
-detailPerson.meetingArea.length > 0 ? (
-  <p style={{ margin: 0 }}>
-    会える地域: {detailPerson.meetingArea.join("、")}
-  </p>
-) : null}
+                  {Array.isArray(detailPerson.meetingArea) &&
+                  detailPerson.meetingArea.length > 0 ? (
+                    <p style={{ margin: 0 }}>
+                      会える地域: {detailPerson.meetingArea.join("、")}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </div>
