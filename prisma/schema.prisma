@@ -3,34 +3,32 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id             String   @id @default(cuid())
-  authId         String   @unique
-  email          String   @unique
-  name           String
-  birthDate DateTime?
-  biologicalSex  String
-  romanticTarget String
-  height         Int?
-  weight         Int?
-  hobbies        String?
-  occupation     String?
-  livingArea     String?
-  meetingArea    String?
-  bio            String?
-  imageUrls      String[]
-  createdAt      DateTime @default(now())
-  lastLoginAt DateTime?
+  id         String   @id @default(cuid())
+  authId     String   @unique
+  name       String?
+  age        Int?
+  bio        String?
+  gender     String?
+  lookingFor String?
+  image      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  sentLikes      Like[]    @relation("sentLikes")
-  receivedLikes  Like[]    @relation("receivedLikes")
+  // 退会用
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+
+  // relations
+  likesSent      Like[]    @relation("LikesSent")
+  likesReceived  Like[]    @relation("LikesReceived")
   matchesAsUser1 Match[]   @relation("MatchUser1")
   matchesAsUser2 Match[]   @relation("MatchUser2")
-  messages       Message[] @relation("MessageSender")
+  messages       Message[]
 }
 
 model Like {
@@ -39,16 +37,8 @@ model Like {
   toUserId   String
   createdAt  DateTime @default(now())
 
-  fromUser User @relation("sentLikes", fields: [fromUserId], references: [id])
-  toUser   User @relation("receivedLikes", fields: [toUserId], references: [id])
-}
-
-model Swipe {
-  id         String   @id @default(cuid())
-  fromUserId String
-  toUserId   String
-  action     String
-  createdAt  DateTime @default(now())
+  fromUser User @relation("LikesSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("LikesReceived", fields: [toUserId], references: [id], onDelete: Cascade)
 
   @@unique([fromUserId, toUserId])
 }
@@ -59,14 +49,11 @@ model Match {
   user2Id   String
   createdAt DateTime @default(now())
 
-  user1WantsMeet Boolean   @default(false)
-  user2WantsMeet Boolean   @default(false)
-  meetMatchedAt  DateTime?
-
-  user1 User @relation("MatchUser1", fields: [user1Id], references: [id])
-  user2 User @relation("MatchUser2", fields: [user2Id], references: [id])
-
+  user1    User      @relation("MatchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2    User      @relation("MatchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
   messages Message[]
+
+  @@unique([user1Id, user2Id])
 }
 
 model Message {
@@ -76,7 +63,6 @@ model Message {
   text      String
   createdAt DateTime @default(now())
 
-  match  Match @relation(fields: [matchId], references: [id])
-  sender User  @relation("MessageSender", fields: [senderId], references: [id])
+  match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id], onDelete: Cascade)
 }
-

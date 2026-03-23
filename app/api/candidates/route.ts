@@ -104,6 +104,7 @@ export async function GET(req: Request) {
 
     const users: CandidateUser[] = await prisma.user.findMany({
       where: {
+        isDeleted: false,
         id: {
           not: currentUserId,
           notIn: swipedIds,

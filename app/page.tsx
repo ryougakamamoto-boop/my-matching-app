@@ -241,6 +241,30 @@ export default function HomePage() {
     );
   }
 
+  function openChatPartnerProfile() {
+    if (!selectedMatch) return;
+
+    const person: AppUser = {
+      id: selectedMatch.partner.id,
+      authId: "",
+      email: "",
+      name: selectedMatch.partner.name,
+      biologicalSex: "",
+      romanticTarget: "",
+      birthDate: selectedMatch.partner.birthDate ?? null,
+      height: null,
+      weight: null,
+      hobbies: null,
+      occupation: null,
+      livingArea: null,
+      meetingArea: [],
+      bio: selectedMatch.partner.bio ?? null,
+      imageUrls: selectedMatch.partner.imageUrls ?? [],
+    };
+
+    setDetailPerson(person);
+  }
+
   useEffect(() => {
     checkSession();
   }, []);
@@ -258,7 +282,7 @@ export default function HomePage() {
   }, [view, appUser?.id]);
 
   useEffect(() => {
-    if (view !== "chat" || !selectedMatch || !appUser) return;
+    if (!selectedMatch || view !== "chat" || !appUser) return;
 
     const channel = supabase
       .channel(`messages-${selectedMatch.id}`)
@@ -306,7 +330,7 @@ export default function HomePage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [view, selectedMatch, appUser]);
+  }, [selectedMatch, view, appUser]);
 
   function getImageIndex(person: AppUser) {
     return activeImageIndexes[person.id] ?? 0;
@@ -572,67 +596,6 @@ export default function HomePage() {
     }
   }
 
-  async function openSwipeAfterLogin(currentUserId: string) {
-    try {
-      setLoading(true);
-      setMessage("");
-
-      const params = new URLSearchParams({
-        currentUserId,
-        sort: sortType,
-      });
-
-      if (minAgeFilter) params.set("minAge", minAgeFilter);
-      if (maxAgeFilter) params.set("maxAge", maxAgeFilter);
-      if (minHeightFilter) params.set("minHeight", minHeightFilter);
-      if (maxHeightFilter) params.set("maxHeight", maxHeightFilter);
-      if (livingAreaFilter) params.set("livingArea", livingAreaFilter);
-      if (meetingAreaFilter) params.set("meetingArea", meetingAreaFilter);
-
-      const res = await fetch(`/api/candidates?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const data = await res.json();
-
-      if (!res.ok || !Array.isArray(data)) {
-        setMessage("候補取得に失敗しました");
-        setBottomTab("mypage");
-        setView("home");
-        return;
-      }
-
-      const mappedPeople = data.map((item: any) => ({
-        ...item,
-        imageUrls: Array.isArray(item.imageUrls) ? item.imageUrls : [],
-        meetingArea: Array.isArray(item.meetingArea)
-          ? item.meetingArea
-          : item.meetingArea
-          ? [item.meetingArea]
-          : [],
-      }));
-
-      const initialIndexes: Record<string, number> = {};
-      mappedPeople.forEach((person: AppUser) => {
-        initialIndexes[person.id] = 0;
-      });
-
-      setPeople(mappedPeople);
-      setActiveImageIndexes(initialIndexes);
-      setLastDirection("");
-      setOverlay("");
-      setDetailPerson(null);
-      setBottomTab("discover");
-      setView("swipe");
-    } catch (error) {
-      console.error(error);
-      setMessage("候補取得中にエラーが発生しました");
-      setBottomTab("mypage");
-      setView("home");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function checkSession() {
     try {
       setView("loading");
@@ -892,6 +855,119 @@ export default function HomePage() {
     setView("login");
   }
 
+  async function handleDeleteAccount() {
+    if (!authUser) return;
+
+    const ok = window.confirm(
+      "本当に退会しますか？退会するとこのアカウントは利用できなくなります。"
+    );
+
+    if (!ok) return;
+
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          authId: authUser.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.error ?? "退会に失敗しました");
+        return;
+      }
+
+      await supabase.auth.signOut();
+
+      setAuthUser(null);
+      setAppUser(null);
+      setPeople([]);
+      setMatches([]);
+      setMessages([]);
+      setReceivedLikes([]);
+      setSelectedMatch(null);
+      setActiveImageIndexes({});
+      setDetailPerson(null);
+      setMessage("退会しました");
+      setBottomTab("discover");
+      setView("login");
+    } catch (error) {
+      console.error(error);
+      setMessage("退会処理中にエラーが発生しました");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function openSwipeAfterLogin(currentUserId: string) {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const params = new URLSearchParams({
+        currentUserId,
+        sort: sortType,
+      });
+
+      if (minAgeFilter) params.set("minAge", minAgeFilter);
+      if (maxAgeFilter) params.set("maxAge", maxAgeFilter);
+      if (minHeightFilter) params.set("minHeight", minHeightFilter);
+      if (maxHeightFilter) params.set("maxHeight", maxHeightFilter);
+      if (livingAreaFilter) params.set("livingArea", livingAreaFilter);
+      if (meetingAreaFilter) params.set("meetingArea", meetingAreaFilter);
+
+      const res = await fetch(`/api/candidates?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const data = await res.json();
+
+      if (!res.ok || !Array.isArray(data)) {
+        setMessage("候補取得に失敗しました");
+        setBottomTab("mypage");
+        setView("home");
+        return;
+      }
+
+      const mappedPeople = data.map((item: any) => ({
+        ...item,
+        imageUrls: Array.isArray(item.imageUrls) ? item.imageUrls : [],
+        meetingArea: Array.isArray(item.meetingArea)
+          ? item.meetingArea
+          : item.meetingArea
+          ? [item.meetingArea]
+          : [],
+      }));
+
+      const initialIndexes: Record<string, number> = {};
+      mappedPeople.forEach((person: AppUser) => {
+        initialIndexes[person.id] = 0;
+      });
+
+      setPeople(mappedPeople);
+      setActiveImageIndexes(initialIndexes);
+      setLastDirection("");
+      setOverlay("");
+      setDetailPerson(null);
+      setBottomTab("discover");
+      setView("swipe");
+    } catch (error) {
+      console.error(error);
+      setMessage("候補取得中にエラーが発生しました");
+      setBottomTab("mypage");
+      setView("home");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function openSwipe() {
     if (!appUser) return;
 
@@ -1011,29 +1087,6 @@ export default function HomePage() {
     }
   }
 
-  function openChatPartnerProfile() {
-  if (!selectedMatch) return;
-
-  const person: AppUser = {
-    id: selectedMatch.partner.id,
-    authId: "",
-    email: "",
-    name: selectedMatch.partner.name,
-    biologicalSex: "",
-    romanticTarget: "",
-    birthDate: selectedMatch.partner.birthDate ?? null,
-    height: null,
-    weight: null,
-    hobbies: null,
-    occupation: null,
-    livingArea: null,
-    meetingArea: [],
-    bio: selectedMatch.partner.bio ?? null,
-    imageUrls: selectedMatch.partner.imageUrls ?? [],
-  };
-
-  setDetailPerson(person);
-}
   async function sendMessage() {
     if (!appUser || !selectedMatch || !newMessage.trim()) return;
 
@@ -1727,6 +1780,23 @@ export default function HomePage() {
               </button>
 
               <button
+                onClick={handleDeleteAccount}
+                disabled={loading}
+                style={{
+                  padding: "14px 20px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#111827",
+                  color: "#fff",
+                  fontWeight: "bold",
+                  fontSize: 16,
+                  cursor: "pointer",
+                }}
+              >
+                {loading ? "処理中..." : "退会する"}
+              </button>
+
+              <button
                 onClick={handleLogout}
                 style={{
                   padding: "14px 20px",
@@ -2356,7 +2426,6 @@ export default function HomePage() {
                     boxSizing: "border-box",
                   }}
                 >
-                
                   {people.map((person, index) => {
                     const imageIndex = getImageIndex(person);
                     const hasImages =
@@ -2374,7 +2443,7 @@ export default function HomePage() {
                         onCardLeftScreen={() => {}}
                         preventSwipe={["up", "down"]}
                       >
-                       <div
+                        <div
                           style={{
                             position: "relative",
                             width: "100%",
@@ -2426,7 +2495,7 @@ export default function HomePage() {
                             <div
                               style={{
                                 position: "relative",
-                                height: "100％",
+                                height: "100%",
                                 background: "#000",
                                 display: "flex",
                                 alignItems: "center",
@@ -2780,32 +2849,32 @@ export default function HomePage() {
             </div>
 
             <div
-  style={{
-    textAlign: "center",
-    marginBottom: 20,
-    fontSize: "clamp(22px, 5vw, 30px)",
-    lineHeight: 1.3,
-    fontWeight: "bold",
-  }}
->
-  <button
-    type="button"
-    onClick={openChatPartnerProfile}
-    style={{
-      border: "none",
-      background: "transparent",
-      padding: 0,
-      margin: 0,
-      cursor: "pointer",
-      fontSize: "inherit",
-      fontWeight: "inherit",
-      color: "#111827",
-    }}
-  >
-    {selectedMatch.partner.name}
-  </button>
-  さんとのチャット
-</div>
+              style={{
+                textAlign: "center",
+                marginBottom: 20,
+                fontSize: "clamp(22px, 5vw, 30px)",
+                lineHeight: 1.3,
+                fontWeight: "bold",
+              }}
+            >
+              <button
+                type="button"
+                onClick={openChatPartnerProfile}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  margin: 0,
+                  cursor: "pointer",
+                  fontSize: "inherit",
+                  fontWeight: "inherit",
+                  color: "#111827",
+                }}
+              >
+                {selectedMatch.partner.name}
+              </button>
+              さんとのチャット
+            </div>
 
             <div
               style={{
