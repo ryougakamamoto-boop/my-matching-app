@@ -1011,6 +1011,29 @@ export default function HomePage() {
     }
   }
 
+  function openChatPartnerProfile() {
+  if (!selectedMatch) return;
+
+  const person: AppUser = {
+    id: selectedMatch.partner.id,
+    authId: "",
+    email: "",
+    name: selectedMatch.partner.name,
+    biologicalSex: "",
+    romanticTarget: "",
+    birthDate: selectedMatch.partner.birthDate ?? null,
+    height: null,
+    weight: null,
+    hobbies: null,
+    occupation: null,
+    livingArea: null,
+    meetingArea: [],
+    bio: selectedMatch.partner.bio ?? null,
+    imageUrls: selectedMatch.partner.imageUrls ?? [],
+  };
+
+  setDetailPerson(person);
+}
   async function sendMessage() {
     if (!appUser || !selectedMatch || !newMessage.trim()) return;
 
@@ -2756,16 +2779,33 @@ export default function HomePage() {
               </button>
             </div>
 
-            <h2
-              style={{
-                textAlign: "center",
-                marginBottom: 20,
-                fontSize: "clamp(22px, 5vw, 30px)",
-                lineHeight: 1.3,
-              }}
-            >
-              {selectedMatch.partner.name} さんとのチャット
-            </h2>
+            <div
+  style={{
+    textAlign: "center",
+    marginBottom: 20,
+    fontSize: "clamp(22px, 5vw, 30px)",
+    lineHeight: 1.3,
+    fontWeight: "bold",
+  }}
+>
+  <button
+    type="button"
+    onClick={openChatPartnerProfile}
+    style={{
+      border: "none",
+      background: "transparent",
+      padding: 0,
+      margin: 0,
+      cursor: "pointer",
+      fontSize: "inherit",
+      fontWeight: "inherit",
+      color: "#111827",
+    }}
+  >
+    {selectedMatch.partner.name}
+  </button>
+  さんとのチャット
+</div>
 
             <div
               style={{
