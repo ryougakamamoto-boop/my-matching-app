@@ -2324,14 +2324,16 @@ export default function HomePage() {
                 <div
                   style={{
                     position: "relative",
-                    width: "92vw",
-                    maxWidth: 380,
+                    width: "100%",
+                    maxWidth: "100%",
                     height: "78vh",
                     minHeight: 560,
                     maxHeight: 720,
                     margin: "0 auto",
+                    boxSizing: "border-box",
                   }}
                 >
+                
                   {people.map((person, index) => {
                     const imageIndex = getImageIndex(person);
                     const hasImages =
@@ -2349,14 +2351,15 @@ export default function HomePage() {
                         onCardLeftScreen={() => {}}
                         preventSwipe={["up", "down"]}
                       >
-                        <div
+                       <div
                           style={{
                             position: "relative",
-                            width: "92vw",
-                            maxWidth: 380,
+                            width: "100%",
+                            maxWidth: "100%",
                             height: "78vh",
                             minHeight: 560,
                             maxHeight: 720,
+                            boxSizing: "border-box",
                           }}
                         >
                           <div
