@@ -7,34 +7,29 @@ export async function GET(req: Request) {
     const authId = searchParams.get("authId");
 
     if (!authId) {
-      return NextResponse.json({ error: "authIdがありません" }, { status: 400 });
+      return NextResponse.json(
+        { error: "authId が必要です" },
+        { status: 400 }
+      );
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        authId,
-        isDeleted: false,
-      },
-      select: {
-        id: true,
-        authId: true,
-        name: true,
-        age: true,
-        bio: true,
-        gender: true,
-        lookingFor: true,
-        image: true,
-        isDeleted: true,
-      },
+    const user = await prisma.user.findUnique({
+      where: { authId },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: "ユーザーが見つかりません" }, { status: 404 });
+    if (!user || user.isDeleted) {
+      return NextResponse.json(
+        { error: "ユーザーが見つかりません" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(user);
   } catch (error) {
     console.error("GET /api/users/me error:", error);
-    return NextResponse.json({ error: "取得に失敗しました" }, { status: 500 });
+    return NextResponse.json(
+      { error: "ユーザー取得に失敗しました" },
+      { status: 500 }
+    );
   }
 }
