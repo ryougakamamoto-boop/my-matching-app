@@ -1,53 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-type CandidateUser = {
-  id: string;
-  authId: string;
-  email: string;
-  name: string;
-  biologicalSex: string;
-  romanticTarget: string;
-  birthDate: Date | null;
-  height: number | null;
-  weight: number | null;
-  hobbies: string | null;
-  occupation: string | null;
-  livingArea: string | null;
-  meetingArea: string | null;
-  bio: string | null;
-  imageUrls: string[];
-  createdAt: Date;
-  lastLoginAt: Date | null;
-};
-
 function ageToBirthDateRange(minAge?: number, maxAge?: number) {
   const today = new Date();
 
-  const birthDateFilter: {
+  const range: {
     gte?: Date;
     lte?: Date;
   } = {};
 
   if (maxAge !== undefined) {
-    const minBirth = new Date(
-      today.getFullYear() - maxAge - 1,
-      today.getMonth(),
-      today.getDate() + 1
-    );
-    birthDateFilter.gte = minBirth;
+    const youngest = new Date(today);
+    youngest.setFullYear(today.getFullYear() - maxAge - 1);
+    youngest.setDate(youngest.getDate() + 1);
+    range.gte = youngest;
   }
 
   if (minAge !== undefined) {
-    const maxBirth = new Date(
-      today.getFullYear() - minAge,
-      today.getMonth(),
-      today.getDate()
-    );
-    birthDateFilter.lte = maxBirth;
+    const oldest = new Date(today);
+    oldest.setFullYear(today.getFullYear() - minAge);
+    range.lte = oldest;
   }
 
-  return birthDateFilter;
+  return range;
 }
 
 export async function GET(req: Request) {
@@ -72,16 +47,9 @@ export async function GET(req: Request) {
 
     const me = await prisma.user.findUnique({
       where: { id: currentUserId },
-      select: {
-        id: true,
-        biologicalSex: true,
-        romanticTarget: true,
-        livingArea: true,
-        meetingArea: true,
-      },
     });
 
-    if (!me) {
+    if (!me || me.isDeleted) {
       return NextResponse.json(
         { error: "ユーザーが見つかりません" },
         { status: 404 }
@@ -93,25 +61,25 @@ export async function GET(req: Request) {
       select: { toUserId: true },
     });
 
-    const swipedIds: string[] = swiped.map(
-  (s: { toUserId: string }) => s.toUserId
-);
+    const swipedIds = swiped.map((s) => s.toUserId);
 
     const birthDateFilter = ageToBirthDateRange(
       minAge ? Number(minAge) : undefined,
       maxAge ? Number(maxAge) : undefined
     );
 
-    const users: CandidateUser[] = await prisma.user.findMany({
+    const users = await prisma.user.findMany({
       where: {
         isDeleted: false,
         id: {
           not: currentUserId,
           notIn: swipedIds,
         },
+
         ...(Object.keys(birthDateFilter).length > 0
           ? { birthDate: birthDateFilter }
           : {}),
+
         ...(minHeight || maxHeight
           ? {
               height: {
@@ -120,8 +88,16 @@ export async function GET(req: Request) {
               },
             }
           : {}),
+
         ...(livingArea ? { livingArea } : {}),
-        ...(meetingArea ? { meetingArea } : {}),
+
+        ...(meetingArea
+          ? {
+              meetingArea: {
+                has: meetingArea,
+              },
+            }
+          : {}),
       },
       select: {
         id: true,
@@ -140,13 +116,13 @@ export async function GET(req: Request) {
         bio: true,
         imageUrls: true,
         createdAt: true,
-        lastLoginAt: true,
       },
     });
 
-    const filtered: CandidateUser[] = users.filter((user: CandidateUser) => {
+    const filtered = users.filter((user) => {
       const myTargetOk =
-        me.romanticTarget === "両方" || me.romanticTarget === user.biologicalSex;
+        me.romanticTarget === "両方" ||
+        me.romanticTarget === user.biologicalSex;
 
       const theirTargetOk =
         user.romanticTarget === "両方" ||
@@ -157,34 +133,15 @@ export async function GET(req: Request) {
 
     if (sort === "recent") {
       filtered.sort(
-        (a: CandidateUser, b: CandidateUser) =>
+        (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
-    } else if (sort === "active") {
-      filtered.sort(
-        (a: CandidateUser, b: CandidateUser) =>
-          new Date(b.lastLoginAt ?? 0).getTime() -
-          new Date(a.lastLoginAt ?? 0).getTime()
-      );
-    } else {
-      filtered.sort((a: CandidateUser, b: CandidateUser) => {
-        const aScore =
-          (a.livingArea && a.livingArea === me.livingArea ? 2 : 0) +
-          (a.meetingArea && a.meetingArea === me.meetingArea ? 1 : 0);
-
-        const bScore =
-          (b.livingArea && b.livingArea === me.livingArea ? 2 : 0) +
-          (b.meetingArea && b.meetingArea === me.meetingArea ? 1 : 0);
-
-        return bScore - aScore;
-      });
     }
 
     return NextResponse.json(
-      filtered.map((u: CandidateUser) => ({
+      filtered.map((u) => ({
         ...u,
         birthDate: u.birthDate ? u.birthDate.toISOString() : null,
-        lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
       }))
     );
   } catch (error) {
