@@ -615,7 +615,15 @@ export default function HomePage() {
         setMessage("ログインユーザーを取得できませんでした");
         return;
       }
-
+      await fetch("/api/users/restore", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    authId: data.user.id,
+  }),
+});
       setAuthUser({
         id: data.user.id,
         email: data.user.email,
