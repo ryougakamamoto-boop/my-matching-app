@@ -182,6 +182,7 @@ export default function HomePage() {
 
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [matchModalUser, setMatchModalUser] = useState<AppUser | null>(null);
 
   const [activeImageIndexes, setActiveImageIndexes] = useState<
     Record<string, number>
@@ -1054,8 +1055,8 @@ export default function HomePage() {
       }
 
       if (action === "like" && data.matched) {
-        alert("マッチしました！");
-      }
+  setMatchModalUser(target);
+  }
 
       await loadReceivedLikes(appUser.id);
     } catch (error) {
@@ -3171,7 +3172,132 @@ export default function HomePage() {
             </div>
           </div>
         )}
+      {matchModalUser && (
+  <div
+    onClick={() => setMatchModalUser(null)}
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.55)",
+      zIndex: 10000,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+      boxSizing: "border-box",
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        width: "100%",
+        maxWidth: 360,
+        background: "#fff",
+        borderRadius: 24,
+        padding: 24,
+        textAlign: "center",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 32,
+          fontWeight: 900,
+          color: "#ef4444",
+          marginBottom: 10,
+        }}
+      >
+        💘 やった！マッチ成立
+      </div>
 
+      <p
+        style={{
+          margin: "0 0 16px",
+          fontSize: 18,
+          fontWeight: 700,
+          color: "#111827",
+        }}
+      >
+        {matchModalUser.name}さんとマッチしました
+      </p>
+
+      <div
+        style={{
+          width: 120,
+          height: 120,
+          borderRadius: "50%",
+          overflow: "hidden",
+          margin: "0 auto 16px",
+          background: "#f3f4f6",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {matchModalUser.imageUrls && matchModalUser.imageUrls.length > 0 ? (
+          <img
+            src={matchModalUser.imageUrls[0]}
+            alt={matchModalUser.name}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        ) : (
+          <div style={{ fontSize: 52 }}>👤</div>
+        )}
+      </div>
+
+      <p
+        style={{
+          margin: "0 0 20px",
+          color: "#6b7280",
+          lineHeight: 1.6,
+        }}
+      >
+        気になるうちにメッセージしてみましょう
+      </p>
+
+      <div style={{ display: "grid", gap: 10 }}>
+        <button
+          onClick={async () => {
+            setMatchModalUser(null);
+            await openMatches();
+          }}
+          style={{
+            padding: "14px 18px",
+            borderRadius: 999,
+            border: "none",
+            background: "#ef4444",
+            color: "#fff",
+            fontWeight: "bold",
+            fontSize: 16,
+            cursor: "pointer",
+          }}
+        >
+          マッチ一覧を見る
+        </button>
+
+        <button
+          onClick={() => setMatchModalUser(null)}
+          style={{
+            padding: "14px 18px",
+            borderRadius: 999,
+            border: "1px solid #d1d5db",
+            background: "#fff",
+            color: "#111827",
+            fontWeight: "bold",
+            fontSize: 16,
+            cursor: "pointer",
+          }}
+        >
+          閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+)}
         {message && (
           <p style={{ marginTop: 20, textAlign: "center" }}>{message}</p>
         )}
