@@ -8,25 +8,28 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  authId         String    @unique
-  email          String    @unique
-  name           String
-  biologicalSex  String
-  romanticTarget String
-  birthDate      DateTime?
-  height         Int?
-  weight         Int?
-  hobbies        String?
-  occupation     String?
-  livingArea     String?
-  meetingArea    String[]
-  bio            String?
-  imageUrls      String[]
-  createdAt      DateTime  @default(now())
-
-  isDeleted Boolean   @default(false)
-  deletedAt DateTime?
+  id                      String    @id @default(cuid())
+  authId                  String    @unique
+  email                   String    @unique
+  name                    String
+  biologicalSex           String
+  romanticTarget          String
+  birthDate               DateTime?
+  height                  Int?
+  weight                  Int?
+  hobbies                 String?
+  occupation              String?
+  livingArea              String?
+  meetingArea             String[]
+  bio                     String?
+  imageUrls               String[]
+  createdAt               DateTime  @default(now())
+  isAgeVerified           Boolean   @default(false)
+  ageVerificationStatus   String    @default("unsubmitted")
+  ageVerificationImageUrl String?
+  ageVerifiedAt           DateTime?
+  isDeleted               Boolean   @default(false)
+  deletedAt               DateTime?
 
   sentLikes      Like[]    @relation("sentLikes")
   receivedLikes  Like[]    @relation("receivedLikes")

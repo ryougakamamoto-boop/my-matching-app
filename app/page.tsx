@@ -39,6 +39,10 @@ type AppUser = {
   meetingArea: string[];
   bio?: string | null;
   imageUrls: string[];
+  isAgeVerified?: boolean;
+  ageVerificationStatus?: string;
+  ageVerificationImageUrl?: string | null;
+  ageVerifiedAt?: string | null;
 };
 
 type MatchPartner = {
@@ -184,6 +188,16 @@ export default function HomePage() {
   >({});
   const [detailPerson, setDetailPerson] = useState<AppUser | null>(null);
 
+  const [ageVerificationImageFiles, setAgeVerificationImageFiles] = useState<
+    File[]
+  >([]);
+  const [ageVerificationPreviewUrls, setAgeVerificationPreviewUrls] = useState<
+    string[]
+  >([]);
+  const [ageVerificationStatus, setAgeVerificationStatus] =
+    useState("unsubmitted");
+  const [isAgeVerified, setIsAgeVerified] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const currentIndex = people.length - 1;
 
@@ -246,6 +260,56 @@ export default function HomePage() {
     }
   }, [messages, view]);
 
+  useEffect(() => {
+    if (view !== "chat" || !selectedMatch || !appUser) return;
+
+    const channel = supabase
+      .channel(`messages-${selectedMatch.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "Message",
+          filter: `matchId=eq.${selectedMatch.id}`,
+        },
+        (payload) => {
+          const newRow = payload.new as {
+            id: string;
+            text: string;
+            createdAt: string;
+            senderId: string;
+          };
+
+          setMessages((prev) => {
+            if (prev.some((msg) => msg.id === newRow.id)) return prev;
+
+            return [
+              ...prev,
+              {
+                id: newRow.id,
+                text: newRow.text,
+                createdAt: newRow.createdAt,
+                senderId: newRow.senderId,
+                sender: {
+                  id: newRow.senderId,
+                  name:
+                    newRow.senderId === appUser.id
+                      ? appUser.name
+                      : selectedMatch.partner.name,
+                },
+              },
+            ];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [view, selectedMatch, appUser]);
+
   function getImageIndex(person: AppUser) {
     return activeImageIndexes[person.id] ?? 0;
   }
@@ -286,6 +350,24 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error("loadReceivedLikes error =", error);
+    }
+  }
+
+  async function loadAgeVerificationStatus(authId: string) {
+    try {
+      const res = await fetch(
+        `/api/age-verification/status?authId=${encodeURIComponent(authId)}`,
+        { cache: "no-store" }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) return;
+
+      setAgeVerificationStatus(data.ageVerificationStatus ?? "unsubmitted");
+      setIsAgeVerified(!!data.isAgeVerified);
+    } catch (error) {
+      console.error("loadAgeVerificationStatus error =", error);
     }
   }
 
@@ -360,6 +442,84 @@ export default function HomePage() {
     }
 
     return uploadedUrls;
+  }
+
+  async function handleAgeVerificationImageChange(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const files = Array.from(e.target.files ?? []).slice(0, 1);
+
+    if (files.length === 0) {
+      setAgeVerificationImageFiles([]);
+      setAgeVerificationPreviewUrls([]);
+      return;
+    }
+
+    try {
+      const compressedFiles: File[] = [];
+
+      for (const file of files) {
+        const compressedFile = await imageCompression(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1600,
+          useWebWorker: true,
+        });
+
+        compressedFiles.push(compressedFile as File);
+      }
+
+      setAgeVerificationImageFiles(compressedFiles);
+      setAgeVerificationPreviewUrls(
+        compressedFiles.map((file) => URL.createObjectURL(file))
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage("年齢確認画像の圧縮に失敗しました");
+    }
+  }
+
+  async function handleSubmitAgeVerification() {
+    if (!authUser) return;
+
+    if (ageVerificationImageFiles.length === 0) {
+      setMessage("年齢確認画像を選択してください");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const uploadedUrls = await uploadMultipleImages(ageVerificationImageFiles);
+      const imageUrl = uploadedUrls[0];
+
+      const res = await fetch("/api/age-verification/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          authId: authUser.id,
+          imageUrl,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.error ?? "年齢確認申請に失敗しました");
+        return;
+      }
+
+      setAgeVerificationStatus(data.ageVerificationStatus ?? "pending");
+      setIsAgeVerified(!!data.isAgeVerified);
+      setMessage("年齢確認を申請しました");
+    } catch (error) {
+      console.error(error);
+      setMessage("年齢確認申請中にエラーが発生しました");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleUpdateProfile() {
@@ -480,6 +640,7 @@ export default function HomePage() {
       });
 
       await loadReceivedLikes(data.id);
+      await loadAgeVerificationStatus(user.id);
       setView("home");
     } catch (error) {
       console.error("checkSession error =", error);
@@ -615,15 +776,17 @@ export default function HomePage() {
         setMessage("ログインユーザーを取得できませんでした");
         return;
       }
+
       await fetch("/api/users/restore", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    authId: data.user.id,
-  }),
-});
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          authId: data.user.id,
+        }),
+      });
+
       setAuthUser({
         id: data.user.id,
         email: data.user.email,
@@ -827,6 +990,11 @@ export default function HomePage() {
 
   async function sendMessage() {
     if (!appUser || !selectedMatch || !newMessage.trim()) return;
+
+    if (!isAgeVerified) {
+      setMessage("年齢確認が完了していないためメッセージできません");
+      return;
+    }
 
     try {
       const res = await fetch("/api/messages", {
@@ -1499,6 +1667,90 @@ export default function HomePage() {
             <p style={{ textAlign: "center", marginBottom: 20 }}>
               年齢: {appUser.birthDate ? `${calcAge(appUser.birthDate)}歳` : "未設定"}
             </p>
+
+            <div style={{ display: "grid", gap: 10, marginBottom: 16 }}>
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 14,
+                  background: isAgeVerified ? "#ecfdf5" : "#fff7ed",
+                  border: `1px solid ${isAgeVerified ? "#34d399" : "#fdba74"}`,
+                  color: isAgeVerified ? "#065f46" : "#9a3412",
+                  fontWeight: "bold",
+                  textAlign: "center",
+                }}
+              >
+                年齢確認状態：
+                {isAgeVerified
+                  ? "確認済み"
+                  : ageVerificationStatus === "pending"
+                  ? "審査中"
+                  : "未提出"}
+              </div>
+
+              {!isAgeVerified && (
+                <>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAgeVerificationImageChange}
+                    style={{
+                      width: "100%",
+                      padding: 10,
+                      borderRadius: 12,
+                      border: "1px solid #ccc",
+                      background: "#fff",
+                      boxSizing: "border-box",
+                    }}
+                  />
+
+                  {ageVerificationPreviewUrls.length > 0 && (
+                    <img
+                      src={ageVerificationPreviewUrls[0]}
+                      alt="age-verification-preview"
+                      style={{
+                        width: "100%",
+                        maxWidth: 240,
+                        borderRadius: 12,
+                        objectFit: "cover",
+                      }}
+                    />
+                  )}
+
+                  <button
+                    onClick={handleSubmitAgeVerification}
+                    disabled={loading}
+                    style={{
+                      padding: "14px 20px",
+                      borderRadius: 999,
+                      border: "none",
+                      background: "#f59e0b",
+                      color: "#fff",
+                      fontWeight: "bold",
+                      fontSize: 16,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {loading ? "申請中..." : "年齢確認を申請する"}
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div
+              style={{
+                padding: 12,
+                borderRadius: 14,
+                background: "#f9fafb",
+                border: "1px solid #e5e7eb",
+                color: "#6b7280",
+                fontWeight: "bold",
+                textAlign: "center",
+                marginBottom: 16,
+              }}
+            >
+              AIデートプラン提案機能：今後実施予定
+            </div>
 
             <div style={{ display: "grid", gap: 12 }}>
               <button
@@ -2614,6 +2866,38 @@ export default function HomePage() {
               さんとのチャット
             </div>
 
+            {!isAgeVerified && (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: 12,
+                  borderRadius: 14,
+                  background: "#fff7ed",
+                  border: "1px solid #fdba74",
+                  color: "#9a3412",
+                  textAlign: "center",
+                  fontWeight: "bold",
+                }}
+              >
+                年齢確認が完了するまでチャットは利用できません
+              </div>
+            )}
+
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                borderRadius: 14,
+                background: "#f9fafb",
+                border: "1px solid #e5e7eb",
+                color: "#6b7280",
+                textAlign: "center",
+                fontWeight: "bold",
+              }}
+            >
+              AIデートプラン提案機能：今後実施予定
+            </div>
+
             <div
               style={{
                 background: "#f9fafb",
@@ -2684,6 +2968,7 @@ export default function HomePage() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="メッセージを入力"
+                disabled={!isAgeVerified}
                 style={{
                   flex: 1,
                   padding: 12,
@@ -2691,19 +2976,21 @@ export default function HomePage() {
                   border: "1px solid #ccc",
                   fontSize: 16,
                   minWidth: 0,
+                  background: isAgeVerified ? "#fff" : "#f3f4f6",
                 }}
               />
               <button
                 onClick={sendMessage}
+                disabled={!isAgeVerified}
                 style={{
                   padding: "12px 18px",
                   borderRadius: 999,
                   border: "none",
-                  background: "#ef4444",
+                  background: isAgeVerified ? "#ef4444" : "#9ca3af",
                   color: "#fff",
                   fontWeight: "bold",
                   fontSize: 16,
-                  cursor: "pointer",
+                  cursor: isAgeVerified ? "pointer" : "not-allowed",
                   whiteSpace: "nowrap",
                 }}
               >
