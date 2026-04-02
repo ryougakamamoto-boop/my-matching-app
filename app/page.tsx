@@ -1737,20 +1737,6 @@ export default function HomePage() {
               )}
             </div>
 
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 14,
-                background: "#f9fafb",
-                border: "1px solid #e5e7eb",
-                color: "#6b7280",
-                fontWeight: "bold",
-                textAlign: "center",
-                marginBottom: 16,
-              }}
-            >
-              AIデートプラン提案機能：今後実施予定
-            </div>
 
             <div style={{ display: "grid", gap: 12 }}>
               <button
