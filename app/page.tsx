@@ -2494,169 +2494,197 @@ export default function HomePage() {
                                 flexShrink: 0,
                               }}
                             >
-                              {hasImages ? (
-                                <>
-                                  <img
-                                    src={currentImageUrl ?? ""}
-                                    alt={person.name}
-                                    draggable={false}
-                                    style={{
-                                      width: "100%",
-                                      height: "100%",
-                                      objectFit: "cover",
-                                      background: "#000",
-                                      pointerEvents: "none",
-                                    }}
-                                  />
+                              <div
+  style={{
+    position: "relative",
+    height: "100%",
+    background: "#000",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    flexShrink: 0,
+  }}
+>
+  {hasImages ? (
+    <>
+      <img
+        src={currentImageUrl ?? ""}
+        alt={person.name}
+        draggable={false}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          background: "#000",
+          pointerEvents: "none",
+        }}
+      />
 
-                                  {person.imageUrls.length > 1 && (
-                                    <>
-                                      <div
-                                        style={{
-                                          position: "absolute",
-                                          top: 10,
-                                          left: 10,
-                                          right: 10,
-                                          zIndex: 15,
-                                          display: "flex",
-                                          gap: 6,
-                                        }}
-                                      >
-                                        {person.imageUrls.map((_, barIndex) => (
-                                          <div
-                                            key={barIndex}
-                                            style={{
-                                              flex: 1,
-                                              height: 4,
-                                              borderRadius: 999,
-                                              background:
-                                                barIndex === imageIndex
-                                                  ? "rgba(255,255,255,0.98)"
-                                                  : "rgba(255,255,255,0.38)",
-                                            }}
-                                          />
-                                        ))}
-                                      </div>
+      {person.imageUrls.length > 1 && (
+        <>
+          <div
+            style={{
+              position: "absolute",
+              top: 10,
+              left: 10,
+              right: 10,
+              zIndex: 15,
+              display: "flex",
+              gap: 6,
+            }}
+          >
+            {person.imageUrls.map((_, barIndex) => (
+              <div
+                key={barIndex}
+                style={{
+                  flex: 1,
+                  height: 4,
+                  borderRadius: 999,
+                  background:
+                    barIndex === imageIndex
+                      ? "rgba(255,255,255,0.98)"
+                      : "rgba(255,255,255,0.38)",
+                }}
+              />
+            ))}
+          </div>
 
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          prevImage(person);
-                                        }}
-                                        onTouchStart={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          prevImage(person);
-                                        }}
-                                        style={{
-                                          position: "absolute",
-                                          top: 0,
-                                          left: 0,
-                                          width: "50%",
-                                          height: "70%",
-                                          border: "none",
-                                          background: "transparent",
-                                          zIndex: 20,
-                                          cursor: "pointer",
-                                        }}
-                                        aria-label="前の画像"
-                                      />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              prevImage(person);
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              prevImage(person);
+            }}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "50%",
+              height: "70%",
+              border: "none",
+              background: "transparent",
+              zIndex: 20,
+              cursor: "pointer",
+            }}
+            aria-label="前の画像"
+          />
 
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          nextImage(person);
-                                        }}
-                                        onTouchStart={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          nextImage(person);
-                                        }}
-                                        style={{
-                                          position: "absolute",
-                                          top: 0,
-                                          right: 0,
-                                          width: "50%",
-                                          height: "70%",
-                                          border: "none",
-                                          background: "transparent",
-                                          zIndex: 20,
-                                          cursor: "pointer",
-                                        }}
-                                        aria-label="次の画像"
-                                      />
-                                    </>
-                                  )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              nextImage(person);
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              nextImage(person);
+            }}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              width: "50%",
+              height: "70%",
+              border: "none",
+              background: "transparent",
+              zIndex: 20,
+              cursor: "pointer",
+            }}
+            aria-label="次の画像"
+          />
+        </>
+      )}
+    </>
+  ) : (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        background: "linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 88,
+          color: "#9ca3af",
+        }}
+      >
+        👤
+      </div>
+    </div>
+  )}
 
-                                  <div
-                                    style={{
-                                      position: "absolute",
-                                      left: 0,
-                                      right: 0,
-                                      bottom: 0,
-                                      padding: "18px 16px 16px",
-                                      background:
-                                        "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.38), rgba(0,0,0,0))",
-                                      color: "#fff",
-                                      zIndex: 30,
-                                    }}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setDetailPerson(person);
-                                      }}
-                                      onTouchStart={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setDetailPerson(person);
-                                      }}
-                                      style={{
-                                        border: "none",
-                                        background: "transparent",
-                                        color: "#fff",
-                                        padding: 0,
-                                        margin: 0,
-                                        fontSize: 30,
-                                        fontWeight: 800,
-                                        cursor: "pointer",
-                                        textAlign: "left",
-                                      }}
-                                    >
-                                      {person.name}
-                                      {person.birthDate
-                                        ? `・${calcAge(person.birthDate)}歳`
-                                        : ""}
-                                    </button>
+  <div
+    style={{
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      padding: "18px 16px 16px",
+      background: hasImages
+        ? "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.38), rgba(0,0,0,0))"
+        : "linear-gradient(to top, rgba(17,24,39,0.92), rgba(17,24,39,0.72), rgba(17,24,39,0.18))",
+      color: "#fff",
+      zIndex: 30,
+    }}
+  >
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDetailPerson(person);
+      }}
+      onTouchStart={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDetailPerson(person);
+      }}
+      style={{
+        border: "none",
+        background: "transparent",
+        color: "#fff",
+        padding: 0,
+        margin: 0,
+        fontSize: 30,
+        fontWeight: 800,
+        cursor: "pointer",
+        textAlign: "left",
+      }}
+    >
+      {person.name}
+      {person.birthDate ? `・${calcAge(person.birthDate)}歳` : ""}
+    </button>
 
-                                    <p
-                                      style={{
-                                        margin: "8px 0 0",
-                                        fontSize: 15,
-                                        lineHeight: 1.5,
-                                        color: "rgba(255,255,255,0.95)",
-                                        wordBreak: "break-word",
-                                      }}
-                                    >
-                                      {person.bio?.trim()
-                                        ? person.bio.length > 28
-                                          ? `${person.bio.slice(0, 28)}...`
-                                          : person.bio
-                                        : "名前をタップして詳しいプロフィールを見る"}
-                                    </p>
-                                  </div>
-                                </>
-                              ) : (
-                                <div style={{ fontSize: 64, color: "#9ca3af" }}>
-                                  👤
-                                </div>
-                              )}
+    <p
+      style={{
+        margin: "8px 0 0",
+        fontSize: 15,
+        lineHeight: 1.5,
+        color: "rgba(255,255,255,0.95)",
+        wordBreak: "break-word",
+      }}
+    >
+      {person.bio?.trim()
+        ? person.bio.length > 28
+          ? `${person.bio.slice(0, 28)}...`
+          : person.bio
+        : "名前をタップして詳しいプロフィールを見る"}
+    </p>
+  </div>
+</div>
                             </div>
                           </div>
                         </div>
