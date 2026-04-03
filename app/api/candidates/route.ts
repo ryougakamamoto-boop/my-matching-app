@@ -61,6 +61,22 @@ export async function GET(req: Request) {
       select: { toUserId: true },
     });
 
+    const blocks = await prisma.block.findMany({
+  where: {
+    OR: [
+      { fromUserId: currentUserId },
+      { toUserId: currentUserId },
+    ],
+  },
+  select: {
+    fromUserId: true,
+    toUserId: true,
+  },
+});
+
+const blockedUserIds = blocks.map((b) =>
+  b.fromUserId === currentUserId ? b.toUserId : b.fromUserId
+);
     const swipedIds = swiped.map((s) => s.toUserId);
 
     const birthDateFilter = ageToBirthDateRange(
@@ -72,9 +88,9 @@ export async function GET(req: Request) {
       where: {
         isDeleted: false,
         id: {
-          not: currentUserId,
-          notIn: swipedIds,
-        },
+  not: currentUserId,
+  notIn: [...swipedIds, ...blockedUserIds],
+},
 
         ...(Object.keys(birthDateFilter).length > 0
           ? { birthDate: birthDateFilter }

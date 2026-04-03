@@ -13,73 +13,47 @@ export async function GET(req: Request) {
       );
     }
 
-    const likes = await prisma.like.findMany({
+    const blocks = await prisma.block.findMany({
       where: {
-        toUserId: currentUserId,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        fromUser: {
-          select: {
-            id: true,
-            name: true,
-            bio: true,
-            imageUrls: true,
-          },
-        },
-      },
-    });
-
-    const mySwipes = await prisma.swipe.findMany({
-      where: {
-        fromUserId: currentUserId,
+        OR: [{ fromUserId: currentUserId }, { toUserId: currentUserId }],
       },
       select: {
+        fromUserId: true,
         toUserId: true,
       },
     });
 
-    const alreadySwipedUserIds = new Set(
-      mySwipes.map((swipe) => swipe.toUserId)
+    const blockedUserIds = blocks.map((b) =>
+      b.fromUserId === currentUserId ? b.toUserId : b.fromUserId
     );
 
-    console.log("currentUserId:", currentUserId);
-    console.log(
-      "likes:",
-      likes.map((l) => ({
-        fromUserId: l.fromUserId,
-        toUserId: l.toUserId,
-      }))
-    );
-    console.log("mySwipes:", mySwipes);
-    console.log("alreadySwipedUserIds:", [...alreadySwipedUserIds]);
-
-    const filteredLikes = likes.filter(
-      (like) => !alreadySwipedUserIds.has(like.fromUserId)
-    );
-
-    console.log(
-      "filteredLikes:",
-      filteredLikes.map((l) => ({
-        fromUserId: l.fromUserId,
-        toUserId: l.toUserId,
-      }))
-    );
-
-    const result = filteredLikes.map((like) => ({
-      id: like.id,
-      createdAt: like.createdAt,
-      fromUser: {
-        id: like.fromUser.id,
-        name: like.fromUser.name,
-        bio: like.fromUser.bio,
-        imageUrls: like.fromUser.imageUrls ?? [],
+    const likes = await prisma.like.findMany({
+      where: {
+        toUserId: currentUserId,
       },
-    }));
+      orderBy: { createdAt: "desc" },
+      include: {
+        fromUser: true,
+      },
+    });
 
-    return NextResponse.json(result);
+    const visibleLikes = likes
+      .filter((item) => !blockedUserIds.includes(item.fromUser.id))
+      .map((item) => ({
+        id: item.id,
+        createdAt: item.createdAt.toISOString(),
+        fromUser: {
+          id: item.fromUser.id,
+          name: item.fromUser.name,
+          bio: item.fromUser.bio,
+          imageUrls: item.fromUser.imageUrls ?? [],
+          birthDate: item.fromUser.birthDate
+            ? item.fromUser.birthDate.toISOString()
+            : null,
+        },
+      }));
+
+    return NextResponse.json(visibleLikes);
   } catch (error) {
     console.error("GET /api/likes/received error:", error);
     return NextResponse.json(

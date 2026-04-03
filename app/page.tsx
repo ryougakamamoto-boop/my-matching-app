@@ -182,7 +182,6 @@ export default function HomePage() {
 
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [matchModalUser, setMatchModalUser] = useState<AppUser | null>(null);
 
   const [activeImageIndexes, setActiveImageIndexes] = useState<
     Record<string, number>
@@ -198,6 +197,8 @@ export default function HomePage() {
   const [ageVerificationStatus, setAgeVerificationStatus] =
     useState("unsubmitted");
   const [isAgeVerified, setIsAgeVerified] = useState(false);
+
+  const [matchModalUser, setMatchModalUser] = useState<AppUser | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const currentIndex = people.length - 1;
@@ -227,90 +228,6 @@ export default function HomePage() {
     );
   }
 
-  function openChatPartnerProfile() {
-    if (!selectedMatch) return;
-
-    const person: AppUser = {
-      id: selectedMatch.partner.id,
-      authId: "",
-      email: "",
-      name: selectedMatch.partner.name,
-      biologicalSex: "",
-      romanticTarget: "",
-      birthDate: selectedMatch.partner.birthDate ?? null,
-      height: null,
-      weight: null,
-      hobbies: null,
-      occupation: null,
-      livingArea: null,
-      meetingArea: [],
-      bio: selectedMatch.partner.bio ?? null,
-      imageUrls: selectedMatch.partner.imageUrls ?? [],
-    };
-
-    setDetailPerson(person);
-  }
-
-  useEffect(() => {
-    checkSession();
-  }, []);
-
-  useEffect(() => {
-    if (view === "chat") {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, view]);
-
-  useEffect(() => {
-    if (view !== "chat" || !selectedMatch || !appUser) return;
-
-    const channel = supabase
-      .channel(`messages-${selectedMatch.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "Message",
-          filter: `matchId=eq.${selectedMatch.id}`,
-        },
-        (payload) => {
-          const newRow = payload.new as {
-            id: string;
-            text: string;
-            createdAt: string;
-            senderId: string;
-          };
-
-          setMessages((prev) => {
-            if (prev.some((msg) => msg.id === newRow.id)) return prev;
-
-            return [
-              ...prev,
-              {
-                id: newRow.id,
-                text: newRow.text,
-                createdAt: newRow.createdAt,
-                senderId: newRow.senderId,
-                sender: {
-                  id: newRow.senderId,
-                  name:
-                    newRow.senderId === appUser.id
-                      ? appUser.name
-                      : selectedMatch.partner.name,
-                },
-              },
-            ];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [view, selectedMatch, appUser]);
-
   function getImageIndex(person: AppUser) {
     return activeImageIndexes[person.id] ?? 0;
   }
@@ -338,6 +255,18 @@ export default function HomePage() {
     });
   }
 
+  function normalizeAppUser(data: any): AppUser {
+    return {
+      ...data,
+      imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+      meetingArea: Array.isArray(data.meetingArea)
+        ? data.meetingArea
+        : data.meetingArea
+        ? [data.meetingArea]
+        : [],
+    };
+  }
+
   async function loadReceivedLikes(userId: string) {
     try {
       const res = await fetch(`/api/likes/received?currentUserId=${userId}`, {
@@ -361,9 +290,12 @@ export default function HomePage() {
         { cache: "no-store" }
       );
 
-      const data = await res.json();
+      if (!res.ok) {
+        console.error("loadAgeVerificationStatus failed:", res.status);
+        return;
+      }
 
-      if (!res.ok) return;
+      const data = await res.json();
 
       setAgeVerificationStatus(data.ageVerificationStatus ?? "unsubmitted");
       setIsAgeVerified(!!data.isAgeVerified);
@@ -421,6 +353,90 @@ export default function HomePage() {
     setView("editProfile");
   }
 
+  function openChatPartnerProfile() {
+    if (!selectedMatch) return;
+
+    const person: AppUser = {
+      id: selectedMatch.partner.id,
+      authId: "",
+      email: "",
+      name: selectedMatch.partner.name,
+      biologicalSex: "",
+      romanticTarget: "",
+      birthDate: selectedMatch.partner.birthDate ?? null,
+      height: null,
+      weight: null,
+      hobbies: null,
+      occupation: null,
+      livingArea: null,
+      meetingArea: [],
+      bio: selectedMatch.partner.bio ?? null,
+      imageUrls: selectedMatch.partner.imageUrls ?? [],
+    };
+
+    setDetailPerson(person);
+  }
+
+  useEffect(() => {
+    checkSession();
+  }, []);
+
+  useEffect(() => {
+    if (view === "chat") {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, view]);
+
+  useEffect(() => {
+    if (!selectedMatch || !appUser || view !== "chat") return;
+
+    const channel = supabase
+      .channel(`messages-${selectedMatch.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "Message",
+          filter: `matchId=eq.${selectedMatch.id}`,
+        },
+        (payload) => {
+          const newRow = payload.new as {
+            id: string;
+            text: string;
+            createdAt: string;
+            senderId: string;
+          };
+
+          setMessages((prev) => {
+            if (prev.some((msg) => msg.id === newRow.id)) return prev;
+
+            return [
+              ...prev,
+              {
+                id: newRow.id,
+                text: newRow.text,
+                createdAt: newRow.createdAt,
+                senderId: newRow.senderId,
+                sender: {
+                  id: newRow.senderId,
+                  name:
+                    newRow.senderId === appUser.id
+                      ? appUser.name
+                      : selectedMatch.partner.name,
+                },
+              },
+            ];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedMatch, appUser, view]);
+
   async function uploadMultipleImages(files: File[]) {
     const uploadedUrls: string[] = [];
 
@@ -443,6 +459,36 @@ export default function HomePage() {
     }
 
     return uploadedUrls;
+  }
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).slice(0, 5);
+
+    if (files.length === 0) {
+      setImageFiles([]);
+      setPreviewUrls([]);
+      return;
+    }
+
+    try {
+      const compressedFiles: File[] = [];
+
+      for (const file of files) {
+        const compressedFile = await imageCompression(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+        });
+
+        compressedFiles.push(compressedFile as File);
+      }
+
+      setImageFiles(compressedFiles);
+      setPreviewUrls(compressedFiles.map((file) => URL.createObjectURL(file)));
+    } catch (error) {
+      console.error(error);
+      setMessage("画像の圧縮に失敗しました");
+    }
   }
 
   async function handleAgeVerificationImageChange(
@@ -505,152 +551,22 @@ export default function HomePage() {
         }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
 
       if (!res.ok) {
-        setMessage(data.error ?? "年齢確認申請に失敗しました");
+        setMessage(data?.error ?? "年齢確認申請に失敗しました");
         return;
       }
 
-      setAgeVerificationStatus(data.ageVerificationStatus ?? "pending");
-      setIsAgeVerified(!!data.isAgeVerified);
+      setAgeVerificationStatus(data?.ageVerificationStatus ?? "pending");
+      setIsAgeVerified(!!data?.isAgeVerified);
       setMessage("年齢確認を申請しました");
     } catch (error) {
       console.error(error);
       setMessage("年齢確認申請中にエラーが発生しました");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleUpdateProfile() {
-    if (!appUser || !authUser) return;
-
-    try {
-      setLoading(true);
-      setMessage("");
-
-      let imageUrls = appUser.imageUrls ?? [];
-
-      if (imageFiles.length > 0) {
-        imageUrls = await uploadMultipleImages(imageFiles);
-      }
-
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          authId: authUser.id,
-          email: appUser.email,
-          name: appUser.name,
-          biologicalSex: appUser.biologicalSex,
-          romanticTarget: appUser.romanticTarget,
-          bio: bio.trim() || null,
-          imageUrls,
-          height: height.trim() ? Number(height) : null,
-          weight: weight.trim() ? Number(weight) : null,
-          hobbies: hobbies.trim() || null,
-          occupation: occupation.trim() || null,
-          livingArea: livingArea.trim() || null,
-          meetingArea,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        setMessage(result.error ?? "プロフィール更新に失敗しました");
-        return;
-      }
-
-      setAppUser({
-        ...result,
-        imageUrls: Array.isArray(result.imageUrls) ? result.imageUrls : [],
-        meetingArea: Array.isArray(result.meetingArea)
-          ? result.meetingArea
-          : result.meetingArea
-          ? [result.meetingArea]
-          : [],
-      });
-      setPreviewUrls(Array.isArray(result.imageUrls) ? result.imageUrls : []);
-      setImageFiles([]);
-      setMessage("プロフィールを更新しました");
-      setBottomTab("mypage");
-      setView("home");
-    } catch (error) {
-      console.error(error);
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "プロフィール更新中にエラーが発生しました"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function checkSession() {
-    try {
-      setView("loading");
-      setMessage("");
-
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError) {
-        throw new Error(authError.message);
-      }
-
-      if (!user) {
-        setAuthUser(null);
-        setAppUser(null);
-        setView("login");
-        return;
-      }
-
-      setAuthUser({
-        id: user.id,
-        email: user.email,
-      });
-
-      const res = await fetch(
-        `/api/users/me?authId=${encodeURIComponent(user.id)}`,
-        { cache: "no-store" }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(data.error ?? "ユーザー取得に失敗しました");
-        setView("login");
-        return;
-      }
-
-      setAppUser({
-        ...data,
-        imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
-        meetingArea: Array.isArray(data.meetingArea)
-          ? data.meetingArea
-          : data.meetingArea
-          ? [data.meetingArea]
-          : [],
-      });
-
-      await loadReceivedLikes(data.id);
-      await loadAgeVerificationStatus(user.id);
-      setView("home");
-    } catch (error) {
-      console.error("checkSession error =", error);
-      setMessage(
-        error instanceof Error
-          ? `セッション確認に失敗しました: ${error.message}`
-          : "セッション確認に失敗しました"
-      );
-      setView("login");
     }
   }
 
@@ -805,6 +721,61 @@ export default function HomePage() {
     }
   }
 
+  async function checkSession() {
+    try {
+      setView("loading");
+      setMessage("");
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      if (!user) {
+        setAuthUser(null);
+        setAppUser(null);
+        setView("login");
+        return;
+      }
+
+      setAuthUser({
+        id: user.id,
+        email: user.email,
+      });
+
+      const res = await fetch(`/api/users/me?authId=${encodeURIComponent(user.id)}`, {
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.error ?? "ユーザー取得に失敗しました");
+        setView("login");
+        return;
+      }
+
+      const normalized = normalizeAppUser(data);
+      setAppUser(normalized);
+
+      await loadReceivedLikes(normalized.id);
+      await loadAgeVerificationStatus(user.id);
+      setView("home");
+    } catch (error) {
+      console.error("checkSession error =", error);
+      setMessage(
+        error instanceof Error
+          ? `セッション確認に失敗しました: ${error.message}`
+          : "セッション確認に失敗しました"
+      );
+      setView("login");
+    }
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut();
     setAuthUser(null);
@@ -816,6 +787,7 @@ export default function HomePage() {
     setSelectedMatch(null);
     setActiveImageIndexes({});
     setDetailPerson(null);
+    setMatchModalUser(null);
     setMessage("");
     setBottomTab("discover");
     setView("login");
@@ -827,7 +799,6 @@ export default function HomePage() {
     const ok = window.confirm(
       "本当に退会しますか？退会するとこのアカウントは利用できなくなります。"
     );
-
     if (!ok) return;
 
     try {
@@ -862,12 +833,74 @@ export default function HomePage() {
       setSelectedMatch(null);
       setActiveImageIndexes({});
       setDetailPerson(null);
+      setMatchModalUser(null);
       setMessage("退会しました");
       setBottomTab("discover");
       setView("login");
     } catch (error) {
       console.error(error);
       setMessage("退会処理中にエラーが発生しました");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleUpdateProfile() {
+    if (!appUser || !authUser) return;
+
+    try {
+      setLoading(true);
+      setMessage("");
+
+      let imageUrls = appUser.imageUrls ?? [];
+
+      if (imageFiles.length > 0) {
+        imageUrls = await uploadMultipleImages(imageFiles);
+      }
+
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          authId: authUser.id,
+          email: appUser.email,
+          name: appUser.name,
+          biologicalSex: appUser.biologicalSex,
+          romanticTarget: appUser.romanticTarget,
+          bio: bio.trim() || null,
+          imageUrls,
+          height: height.trim() ? Number(height) : null,
+          weight: weight.trim() ? Number(weight) : null,
+          hobbies: hobbies.trim() || null,
+          occupation: occupation.trim() || null,
+          livingArea: livingArea.trim() || null,
+          meetingArea,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setMessage(result.error ?? "プロフィール更新に失敗しました");
+        return;
+      }
+
+      const normalized = normalizeAppUser(result);
+      setAppUser(normalized);
+      setPreviewUrls(normalized.imageUrls);
+      setImageFiles([]);
+      setMessage("プロフィールを更新しました");
+      setBottomTab("mypage");
+      setView("home");
+    } catch (error) {
+      console.error(error);
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "プロフィール更新中にエラーが発生しました"
+      );
     } finally {
       setLoading(false);
     }
@@ -898,19 +931,11 @@ export default function HomePage() {
       const data = await res.json();
 
       if (!res.ok || !Array.isArray(data)) {
-        setMessage("候補取得に失敗しました");
+        setMessage(data?.error ?? "候補取得に失敗しました");
         return;
       }
 
-      const mappedPeople = data.map((item: any) => ({
-        ...item,
-        imageUrls: Array.isArray(item.imageUrls) ? item.imageUrls : [],
-        meetingArea: Array.isArray(item.meetingArea)
-          ? item.meetingArea
-          : item.meetingArea
-          ? [item.meetingArea]
-          : [],
-      }));
+      const mappedPeople = data.map((item: any) => normalizeAppUser(item));
 
       const initialIndexes: Record<string, number> = {};
       mappedPeople.forEach((person: AppUser) => {
@@ -963,14 +988,20 @@ export default function HomePage() {
   }
 
   async function openChat(match: MatchItem) {
+    if (!appUser) return;
+
     try {
       setLoading(true);
       setMessage("");
       setSelectedMatch(match);
 
-      const res = await fetch(`/api/messages?matchId=${match.id}`, {
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/messages?matchId=${match.id}&currentUserId=${appUser.id}`,
+        {
+          cache: "no-store",
+        }
+      );
+
       const data = await res.json();
 
       if (!res.ok || !Array.isArray(data)) {
@@ -1055,8 +1086,8 @@ export default function HomePage() {
       }
 
       if (action === "like" && data.matched) {
-  setMatchModalUser(target);
-  }
+        setMatchModalUser(target);
+      }
 
       await loadReceivedLikes(appUser.id);
     } catch (error) {
@@ -1115,33 +1146,58 @@ export default function HomePage() {
     );
   }
 
-  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []).slice(0, 5);
+  async function handleBlockUser(targetUserId: string) {
+    if (!appUser) return;
 
-    if (files.length === 0) {
-      setImageFiles([]);
-      setPreviewUrls([]);
-      return;
-    }
+    const ok = window.confirm(
+      "このユーザーをブロックしますか？お互いに表示されなくなります。"
+    );
+    if (!ok) return;
 
     try {
-      const compressedFiles: File[] = [];
+      setLoading(true);
+      setMessage("");
 
-      for (const file of files) {
-        const compressedFile = await imageCompression(file, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1200,
-          useWebWorker: true,
-        });
+      const res = await fetch("/api/block", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fromUserId: appUser.id,
+          toUserId: targetUserId,
+        }),
+      });
 
-        compressedFiles.push(compressedFile as File);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.error ?? "ブロックに失敗しました");
+        return;
       }
 
-      setImageFiles(compressedFiles);
-      setPreviewUrls(compressedFiles.map((file) => URL.createObjectURL(file)));
+      setPeople((prev) => prev.filter((p) => p.id !== targetUserId));
+      setMatches((prev) => prev.filter((m) => m.partner.id !== targetUserId));
+      setReceivedLikes((prev) =>
+        prev.filter((item) => item.fromUser.id !== targetUserId)
+      );
+
+      if (selectedMatch?.partner.id === targetUserId) {
+        setSelectedMatch(null);
+        setMessages([]);
+        setView("matches");
+      }
+
+      if (detailPerson?.id === targetUserId) {
+        setDetailPerson(null);
+      }
+
+      setMessage("ブロックしました");
     } catch (error) {
       console.error(error);
-      setMessage("画像の圧縮に失敗しました");
+      setMessage("ブロック中にエラーが発生しました");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -1720,24 +1776,33 @@ export default function HomePage() {
 
                   <button
                     onClick={handleSubmitAgeVerification}
-                    disabled={loading}
+                    disabled={loading || ageVerificationStatus === "pending"}
                     style={{
                       padding: "14px 20px",
                       borderRadius: 999,
                       border: "none",
-                      background: "#f59e0b",
+                      background:
+                        loading || ageVerificationStatus === "pending"
+                          ? "#9ca3af"
+                          : "#f59e0b",
                       color: "#fff",
                       fontWeight: "bold",
                       fontSize: 16,
-                      cursor: "pointer",
+                      cursor:
+                        loading || ageVerificationStatus === "pending"
+                          ? "not-allowed"
+                          : "pointer",
                     }}
                   >
-                    {loading ? "申請中..." : "年齢確認を申請する"}
+                    {ageVerificationStatus === "pending"
+                      ? "審査中です"
+                      : loading
+                      ? "申請中..."
+                      : "年齢確認を申請する"}
                   </button>
                 </>
               )}
             </div>
-
 
             <div style={{ display: "grid", gap: 12 }}>
               <button
@@ -1779,7 +1844,7 @@ export default function HomePage() {
                   padding: "14px 20px",
                   borderRadius: 999,
                   border: "none",
-                  background: "#6b7280",
+                  background: "#374151",
                   color: "#fff",
                   fontWeight: "bold",
                   fontSize: 16,
@@ -2481,197 +2546,187 @@ export default function HomePage() {
                                 flexShrink: 0,
                               }}
                             >
+                              {hasImages ? (
+                                <>
+                                  <img
+                                    src={currentImageUrl ?? ""}
+                                    alt={person.name}
+                                    draggable={false}
+                                    style={{
+                                      width: "100%",
+                                      height: "100%",
+                                      objectFit: "cover",
+                                      background: "#000",
+                                      pointerEvents: "none",
+                                    }}
+                                  />
+
+                                  {person.imageUrls.length > 1 && (
+                                    <>
+                                      <div
+                                        style={{
+                                          position: "absolute",
+                                          top: 10,
+                                          left: 10,
+                                          right: 10,
+                                          zIndex: 15,
+                                          display: "flex",
+                                          gap: 6,
+                                        }}
+                                      >
+                                        {person.imageUrls.map((_, barIndex) => (
+                                          <div
+                                            key={barIndex}
+                                            style={{
+                                              flex: 1,
+                                              height: 4,
+                                              borderRadius: 999,
+                                              background:
+                                                barIndex === imageIndex
+                                                  ? "rgba(255,255,255,0.98)"
+                                                  : "rgba(255,255,255,0.38)",
+                                            }}
+                                          />
+                                        ))}
+                                      </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          prevImage(person);
+                                        }}
+                                        onTouchStart={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          prevImage(person);
+                                        }}
+                                        style={{
+                                          position: "absolute",
+                                          top: 0,
+                                          left: 0,
+                                          width: "50%",
+                                          height: "70%",
+                                          border: "none",
+                                          background: "transparent",
+                                          zIndex: 20,
+                                          cursor: "pointer",
+                                        }}
+                                        aria-label="前の画像"
+                                      />
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          nextImage(person);
+                                        }}
+                                        onTouchStart={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          nextImage(person);
+                                        }}
+                                        style={{
+                                          position: "absolute",
+                                          top: 0,
+                                          right: 0,
+                                          width: "50%",
+                                          height: "70%",
+                                          border: "none",
+                                          background: "transparent",
+                                          zIndex: 20,
+                                          cursor: "pointer",
+                                        }}
+                                        aria-label="次の画像"
+                                      />
+                                    </>
+                                  )}
+                                </>
+                              ) : (
+                                <div
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    background:
+                                      "linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: 88,
+                                      color: "#9ca3af",
+                                    }}
+                                  >
+                                    👤
+                                  </div>
+                                </div>
+                              )}
+
                               <div
-  style={{
-    position: "relative",
-    height: "100%",
-    background: "#000",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    flexShrink: 0,
-  }}
->
-  {hasImages ? (
-    <>
-      <img
-        src={currentImageUrl ?? ""}
-        alt={person.name}
-        draggable={false}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          background: "#000",
-          pointerEvents: "none",
-        }}
-      />
+                                style={{
+                                  position: "absolute",
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  padding: "18px 16px 16px",
+                                  background: hasImages
+                                    ? "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.38), rgba(0,0,0,0))"
+                                    : "linear-gradient(to top, rgba(17,24,39,0.92), rgba(17,24,39,0.72), rgba(17,24,39,0.18))",
+                                  color: "#fff",
+                                  zIndex: 30,
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDetailPerson(person);
+                                  }}
+                                  onTouchStart={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDetailPerson(person);
+                                  }}
+                                  style={{
+                                    border: "none",
+                                    background: "transparent",
+                                    color: "#fff",
+                                    padding: 0,
+                                    margin: 0,
+                                    fontSize: 30,
+                                    fontWeight: 800,
+                                    cursor: "pointer",
+                                    textAlign: "left",
+                                  }}
+                                >
+                                  {person.name}
+                                  {person.birthDate
+                                    ? `・${calcAge(person.birthDate)}歳`
+                                    : ""}
+                                </button>
 
-      {person.imageUrls.length > 1 && (
-        <>
-          <div
-            style={{
-              position: "absolute",
-              top: 10,
-              left: 10,
-              right: 10,
-              zIndex: 15,
-              display: "flex",
-              gap: 6,
-            }}
-          >
-            {person.imageUrls.map((_, barIndex) => (
-              <div
-                key={barIndex}
-                style={{
-                  flex: 1,
-                  height: 4,
-                  borderRadius: 999,
-                  background:
-                    barIndex === imageIndex
-                      ? "rgba(255,255,255,0.98)"
-                      : "rgba(255,255,255,0.38)",
-                }}
-              />
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              prevImage(person);
-            }}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              prevImage(person);
-            }}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "50%",
-              height: "70%",
-              border: "none",
-              background: "transparent",
-              zIndex: 20,
-              cursor: "pointer",
-            }}
-            aria-label="前の画像"
-          />
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              nextImage(person);
-            }}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              nextImage(person);
-            }}
-            style={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-              width: "50%",
-              height: "70%",
-              border: "none",
-              background: "transparent",
-              zIndex: 20,
-              cursor: "pointer",
-            }}
-            aria-label="次の画像"
-          />
-        </>
-      )}
-    </>
-  ) : (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 88,
-          color: "#9ca3af",
-        }}
-      >
-        👤
-      </div>
-    </div>
-  )}
-
-  <div
-    style={{
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: 0,
-      padding: "18px 16px 16px",
-      background: hasImages
-        ? "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.38), rgba(0,0,0,0))"
-        : "linear-gradient(to top, rgba(17,24,39,0.92), rgba(17,24,39,0.72), rgba(17,24,39,0.18))",
-      color: "#fff",
-      zIndex: 30,
-    }}
-  >
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDetailPerson(person);
-      }}
-      onTouchStart={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDetailPerson(person);
-      }}
-      style={{
-        border: "none",
-        background: "transparent",
-        color: "#fff",
-        padding: 0,
-        margin: 0,
-        fontSize: 30,
-        fontWeight: 800,
-        cursor: "pointer",
-        textAlign: "left",
-      }}
-    >
-      {person.name}
-      {person.birthDate ? `・${calcAge(person.birthDate)}歳` : ""}
-    </button>
-
-    <p
-      style={{
-        margin: "8px 0 0",
-        fontSize: 15,
-        lineHeight: 1.5,
-        color: "rgba(255,255,255,0.95)",
-        wordBreak: "break-word",
-      }}
-    >
-      {person.bio?.trim()
-        ? person.bio.length > 28
-          ? `${person.bio.slice(0, 28)}...`
-          : person.bio
-        : "名前をタップして詳しいプロフィールを見る"}
-    </p>
-  </div>
-</div>
+                                <p
+                                  style={{
+                                    margin: "8px 0 0",
+                                    fontSize: 15,
+                                    lineHeight: 1.5,
+                                    color: "rgba(255,255,255,0.95)",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {person.bio?.trim()
+                                    ? person.bio.length > 28
+                                      ? `${person.bio.slice(0, 28)}...`
+                                      : person.bio
+                                    : "名前をタップして詳しいプロフィールを見る"}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2881,6 +2936,26 @@ export default function HomePage() {
               さんとのチャット
             </div>
 
+            {selectedMatch && (
+              <button
+                onClick={() => handleBlockUser(selectedMatch.partner.id)}
+                style={{
+                  width: "100%",
+                  padding: "12px 18px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#111827",
+                  color: "#fff",
+                  fontWeight: "bold",
+                  fontSize: 15,
+                  cursor: "pointer",
+                  marginBottom: 16,
+                }}
+              >
+                この相手をブロック
+              </button>
+            )}
+
             {!isAgeVerified && (
               <div
                 style={{
@@ -2897,21 +2972,6 @@ export default function HomePage() {
                 年齢確認が完了するまでチャットは利用できません
               </div>
             )}
-
-            <div
-              style={{
-                marginBottom: 16,
-                padding: 12,
-                borderRadius: 14,
-                background: "#f9fafb",
-                border: "1px solid #e5e7eb",
-                color: "#6b7280",
-                textAlign: "center",
-                fontWeight: "bold",
-              }}
-            >
-              AIデートプラン提案機能：今後実施予定
-            </div>
 
             <div
               style={{
@@ -3168,136 +3228,159 @@ export default function HomePage() {
                     </p>
                   ) : null}
                 </div>
+
+                {appUser && detailPerson.id !== appUser.id && (
+                  <button
+                    onClick={() => handleBlockUser(detailPerson.id)}
+                    style={{
+                      marginTop: 16,
+                      width: "100%",
+                      padding: "14px 18px",
+                      borderRadius: 999,
+                      border: "none",
+                      background: "#111827",
+                      color: "#fff",
+                      fontWeight: "bold",
+                      fontSize: 16,
+                      cursor: "pointer",
+                    }}
+                  >
+                    このユーザーをブロック
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
-      {matchModalUser && (
-  <div
-    onClick={() => setMatchModalUser(null)}
-    style={{
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.55)",
-      zIndex: 10000,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 20,
-      boxSizing: "border-box",
-    }}
-  >
-    <div
-      onClick={(e) => e.stopPropagation()}
-      style={{
-        width: "100%",
-        maxWidth: 360,
-        background: "#fff",
-        borderRadius: 24,
-        padding: 24,
-        textAlign: "center",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 32,
-          fontWeight: 900,
-          color: "#ef4444",
-          marginBottom: 10,
-        }}
-      >
-        💘 やった！マッチ成立
-      </div>
 
-      <p
-        style={{
-          margin: "0 0 16px",
-          fontSize: 18,
-          fontWeight: 700,
-          color: "#111827",
-        }}
-      >
-        {matchModalUser.name}さんとマッチしました
-      </p>
-
-      <div
-        style={{
-          width: 120,
-          height: 120,
-          borderRadius: "50%",
-          overflow: "hidden",
-          margin: "0 auto 16px",
-          background: "#f3f4f6",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {matchModalUser.imageUrls && matchModalUser.imageUrls.length > 0 ? (
-          <img
-            src={matchModalUser.imageUrls[0]}
-            alt={matchModalUser.name}
+        {matchModalUser && (
+          <div
+            onClick={() => setMatchModalUser(null)}
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.55)",
+              zIndex: 10000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+              boxSizing: "border-box",
             }}
-          />
-        ) : (
-          <div style={{ fontSize: 52 }}>👤</div>
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%",
+                maxWidth: 360,
+                background: "#fff",
+                borderRadius: 24,
+                padding: 24,
+                textAlign: "center",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 32,
+                  fontWeight: 900,
+                  color: "#ef4444",
+                  marginBottom: 10,
+                }}
+              >
+                💘 やった！マッチ成立
+              </div>
+
+              <p
+                style={{
+                  margin: "0 0 16px",
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: "#111827",
+                }}
+              >
+                {matchModalUser.name}さんとマッチしました
+              </p>
+
+              <div
+                style={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  margin: "0 auto 16px",
+                  background: "#f3f4f6",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {matchModalUser.imageUrls &&
+                matchModalUser.imageUrls.length > 0 ? (
+                  <img
+                    src={matchModalUser.imageUrls[0]}
+                    alt={matchModalUser.name}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <div style={{ fontSize: 52 }}>👤</div>
+                )}
+              </div>
+
+              <p
+                style={{
+                  margin: "0 0 20px",
+                  color: "#6b7280",
+                  lineHeight: 1.6,
+                }}
+              >
+                気になるうちにメッセージしてみましょう
+              </p>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                <button
+                  onClick={async () => {
+                    setMatchModalUser(null);
+                    await openMatches();
+                  }}
+                  style={{
+                    padding: "14px 18px",
+                    borderRadius: 999,
+                    border: "none",
+                    background: "#ef4444",
+                    color: "#fff",
+                    fontWeight: "bold",
+                    fontSize: 16,
+                    cursor: "pointer",
+                  }}
+                >
+                  マッチ一覧を見る
+                </button>
+
+                <button
+                  onClick={() => setMatchModalUser(null)}
+                  style={{
+                    padding: "14px 18px",
+                    borderRadius: 999,
+                    border: "1px solid #d1d5db",
+                    background: "#fff",
+                    color: "#111827",
+                    fontWeight: "bold",
+                    fontSize: 16,
+                    cursor: "pointer",
+                  }}
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>
         )}
-      </div>
 
-      <p
-        style={{
-          margin: "0 0 20px",
-          color: "#6b7280",
-          lineHeight: 1.6,
-        }}
-      >
-        気になるうちにメッセージしてみましょう
-      </p>
-
-      <div style={{ display: "grid", gap: 10 }}>
-        <button
-          onClick={async () => {
-            setMatchModalUser(null);
-            await openMatches();
-          }}
-          style={{
-            padding: "14px 18px",
-            borderRadius: 999,
-            border: "none",
-            background: "#ef4444",
-            color: "#fff",
-            fontWeight: "bold",
-            fontSize: 16,
-            cursor: "pointer",
-          }}
-        >
-          マッチ一覧を見る
-        </button>
-
-        <button
-          onClick={() => setMatchModalUser(null)}
-          style={{
-            padding: "14px 18px",
-            borderRadius: 999,
-            border: "1px solid #d1d5db",
-            background: "#fff",
-            color: "#111827",
-            fontWeight: "bold",
-            fontSize: 16,
-            cursor: "pointer",
-          }}
-        >
-          閉じる
-        </button>
-      </div>
-    </div>
-  </div>
-)}
         {message && (
           <p style={{ marginTop: 20, textAlign: "center" }}>{message}</p>
         )}

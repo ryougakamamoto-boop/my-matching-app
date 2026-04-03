@@ -5,6 +5,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const matchId = searchParams.get("matchId");
+    const currentUserId = searchParams.get("currentUserId");
 
     if (!matchId) {
       return NextResponse.json(
@@ -13,17 +14,62 @@ export async function GET(req: Request) {
       );
     }
 
-    const messages = await prisma.message.findMany({
-      where: { matchId },
-      include: {
-        sender: true,
-      },
-      orderBy: {
-        createdAt: "asc",
+    if (!currentUserId) {
+      return NextResponse.json(
+        { error: "currentUserId が必要です" },
+        { status: 400 }
+      );
+    }
+
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+    });
+
+    if (!match) {
+      return NextResponse.json(
+        { error: "マッチが見つかりません" },
+        { status: 404 }
+      );
+    }
+
+    const otherUserId =
+      match.user1Id === currentUserId ? match.user2Id : match.user1Id;
+
+    const block = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { fromUserId: currentUserId, toUserId: otherUserId },
+          { fromUserId: otherUserId, toUserId: currentUserId },
+        ],
       },
     });
 
-    return NextResponse.json(messages);
+    if (block) {
+      return NextResponse.json([], { status: 200 });
+    }
+
+    const messages = await prisma.message.findMany({
+      where: { matchId },
+      orderBy: { createdAt: "asc" },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(
+      messages.map((msg) => ({
+        id: msg.id,
+        text: msg.text,
+        createdAt: msg.createdAt.toISOString(),
+        senderId: msg.senderId,
+        sender: msg.sender,
+      }))
+    );
   } catch (error) {
     console.error("GET /api/messages error:", error);
     return NextResponse.json(
@@ -36,15 +82,46 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const { matchId, senderId, text } = body as {
+      matchId?: string;
+      senderId?: string;
+      text?: string;
+    };
 
-    const matchId = String(body.matchId ?? "").trim();
-    const senderId = String(body.senderId ?? "").trim();
-    const text = String(body.text ?? "").trim();
-
-    if (!matchId || !senderId || !text) {
+    if (!matchId || !senderId || !text?.trim()) {
       return NextResponse.json(
-        { error: "matchId, senderId, text は必須です" },
+        { error: "matchId, senderId, text が必要です" },
         { status: 400 }
+      );
+    }
+
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+    });
+
+    if (!match) {
+      return NextResponse.json(
+        { error: "マッチが見つかりません" },
+        { status: 404 }
+      );
+    }
+
+    const otherUserId =
+      match.user1Id === senderId ? match.user2Id : match.user1Id;
+
+    const block = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { fromUserId: senderId, toUserId: otherUserId },
+          { fromUserId: otherUserId, toUserId: senderId },
+        ],
+      },
+    });
+
+    if (block) {
+      return NextResponse.json(
+        { error: "ブロック中のため送信できません" },
+        { status: 403 }
       );
     }
 
@@ -52,22 +129,30 @@ export async function POST(req: Request) {
       data: {
         matchId,
         senderId,
-        text,
+        text: text.trim(),
       },
       include: {
-        sender: true,
+        sender: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(message, { status: 201 });
-    } catch (error) {
-  console.error("GET /api/messages error:", error);
-  return NextResponse.json(
-    {
-      error: "メッセージ取得に失敗しました",
-      detail: error instanceof Error ? error.message : "unknown error",
-    },
-    { status: 500 }
-  );
-}
+    return NextResponse.json({
+      id: message.id,
+      text: message.text,
+      createdAt: message.createdAt.toISOString(),
+      senderId: message.senderId,
+      sender: message.sender,
+    });
+  } catch (error) {
+    console.error("POST /api/messages error:", error);
+    return NextResponse.json(
+      { error: "メッセージ送信に失敗しました" },
+      { status: 500 }
+    );
+  }
 }

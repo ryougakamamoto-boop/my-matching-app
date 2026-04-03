@@ -80,3 +80,12 @@ model Swipe {
 
   @@unique([fromUserId, toUserId], name: "fromUserId_toUserId")
 }
+
+model Block {
+  id         String   @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  createdAt  DateTime @default(now())
+
+  @@unique([fromUserId, toUserId], name: "fromUserId_toUserId")
+}

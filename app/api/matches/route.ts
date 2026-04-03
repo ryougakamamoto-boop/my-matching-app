@@ -45,7 +45,22 @@ export async function GET(req: Request) {
         imageUrls: true,
       },
     });
+const blocks = await prisma.block.findMany({
+  where: {
+    OR: [
+      { fromUserId: currentUserId },
+      { toUserId: currentUserId },
+    ],
+  },
+  select: {
+    fromUserId: true,
+    toUserId: true,
+  },
+});
 
+const blockedUserIds = blocks.map((b) =>
+  b.fromUserId === currentUserId ? b.toUserId : b.fromUserId
+);
     const partnerMap = new Map(partners.map((user) => [user.id, user]));
 
     const result = matches
