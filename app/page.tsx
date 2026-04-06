@@ -1615,10 +1615,32 @@ export default function HomePage() {
         )}
 
         {view === "login" && (
-          <>
-            <h2 style={{ textAlign: "center", marginBottom: 20 }}>ログイン</h2>
+  <>
+    <div style={{ textAlign: "center", marginBottom: 24 }}>
+      <h1
+        style={{
+          margin: 0,
+          fontSize: "clamp(34px, 8vw, 48px)",
+          fontWeight: 900,
+          letterSpacing: "0.08em",
+          color: "#111827",
+        }}
+      >
+        MUSUBU
+      </h1>
+      <p
+        style={{
+          margin: "8px 0 0",
+          fontSize: 14,
+          color: "#6b7280",
+          fontWeight: 600,
+        }}
+      >
+        学生が作ったマッチングアプリ
+      </p>
+    </div>
 
-            {renderAuthInputs(false)}
+    <h2 style={{ textAlign: "center", marginBottom: 20 }}>ログイン</h2>
 
             <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
               <button
@@ -1660,10 +1682,34 @@ export default function HomePage() {
           </>
         )}
 
-        {view === "register" && (
-          <>
-            <h2 style={{ textAlign: "center", marginBottom: 20 }}>新規登録</h2>
+        
+{view === "register" && (
+  <>
+    <div style={{ textAlign: "center", marginBottom: 24 }}>
+      <h1
+        style={{
+          margin: 0,
+          fontSize: "clamp(34px, 8vw, 48px)",
+          fontWeight: 900,
+          letterSpacing: "0.08em",
+          color: "#111827",
+        }}
+      >
+        MUSUBU
+      </h1>
+      <p
+        style={{
+          margin: "8px 0 0",
+          fontSize: 14,
+          color: "#6b7280",
+          fontWeight: 600,
+        }}
+      >
+        学生が作ったマッチングアプリ
+      </p>
+    </div>
 
+    <h2 style={{ textAlign: "center", marginBottom: 20 }}>新規登録</h2>
             {renderAuthInputs(true)}
 
             <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
