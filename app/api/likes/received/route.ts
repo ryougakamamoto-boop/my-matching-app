@@ -13,6 +13,19 @@ export async function GET(req: Request) {
       );
     }
 
+    // 自分がすでにスワイプした相手を取得
+    const swipes = await prisma.swipe.findMany({
+      where: {
+        fromUserId: currentUserId,
+      },
+      select: {
+        toUserId: true,
+      },
+    });
+
+    const swipedUserIds = swipes.map((item) => item.toUserId);
+
+    // ブロック相手も除外
     const blocks = await prisma.block.findMany({
       where: {
         OR: [{ fromUserId: currentUserId }, { toUserId: currentUserId }],
@@ -27,18 +40,28 @@ export async function GET(req: Request) {
       b.fromUserId === currentUserId ? b.toUserId : b.fromUserId
     );
 
+    // 受け取ったいいねを取得
     const likes = await prisma.like.findMany({
       where: {
         toUserId: currentUserId,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: {
+        createdAt: "desc",
+      },
       include: {
         fromUser: true,
       },
     });
 
+    // すでにスワイプ済み / ブロック済み / 退会済み は除外
     const visibleLikes = likes
-      .filter((item) => !blockedUserIds.includes(item.fromUser.id))
+      .filter((item) => {
+        if (!item.fromUser) return false;
+        if (item.fromUser.isDeleted) return false;
+        if (swipedUserIds.includes(item.fromUser.id)) return false;
+        if (blockedUserIds.includes(item.fromUser.id)) return false;
+        return true;
+      })
       .map((item) => ({
         id: item.id,
         createdAt: item.createdAt.toISOString(),
