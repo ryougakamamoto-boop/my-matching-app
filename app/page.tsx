@@ -1642,46 +1642,47 @@ export default function HomePage() {
 
     <h2 style={{ textAlign: "center", marginBottom: 20 }}>ログイン</h2>
 
-            <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
-              <button
-                onClick={handleLogin}
-                disabled={loading}
-                style={{
-                  padding: "14px 20px",
-                  borderRadius: 999,
-                  border: "none",
-                  background: "#ef4444",
-                  color: "#fff",
-                  fontWeight: "bold",
-                  fontSize: 16,
-                  cursor: "pointer",
-                }}
-              >
-                {loading ? "ログイン中..." : "ログイン"}
-              </button>
+    {renderAuthInputs(false)}
 
-              <button
-                onClick={() => {
-                  setMessage("");
-                  setView("register");
-                }}
-                style={{
-                  padding: "14px 20px",
-                  borderRadius: 999,
-                  border: "none",
-                  background: "#2563eb",
-                  color: "#fff",
-                  fontWeight: "bold",
-                  fontSize: 16,
-                  cursor: "pointer",
-                }}
-              >
-                新規登録へ
-              </button>
-            </div>
-          </>
-        )}
+    <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
+      <button
+        onClick={handleLogin}
+        disabled={loading}
+        style={{
+          padding: "14px 20px",
+          borderRadius: 999,
+          border: "none",
+          background: "#ef4444",
+          color: "#fff",
+          fontWeight: "bold",
+          fontSize: 16,
+          cursor: "pointer",
+        }}
+      >
+        {loading ? "ログイン中..." : "ログイン"}
+      </button>
 
+      <button
+        onClick={() => {
+          setMessage("");
+          setView("register");
+        }}
+        style={{
+          padding: "14px 20px",
+          borderRadius: 999,
+          border: "none",
+          background: "#2563eb",
+          color: "#fff",
+          fontWeight: "bold",
+          fontSize: 16,
+          cursor: "pointer",
+        }}
+      >
+        新規登録へ
+      </button>
+    </div>
+  </>
+)}
         
 {view === "register" && (
   <>
