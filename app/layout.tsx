@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  
   openGraph: {
     title: "MUSUBU | 学生が作ったマッチングアプリ",
     description:
